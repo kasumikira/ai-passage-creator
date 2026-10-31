@@ -45,6 +45,8 @@ declare namespace API {
   type ArticleCreateRequest = {
     topic?: string
     style?: string
+    productId?: number
+    platformId?: number
     enabledImageMethods?: string[]
   }
 
@@ -61,6 +63,8 @@ declare namespace API {
     id?: number
     taskId?: string
     userId?: number
+    productId?: number
+    platformId?: number
     topic?: string
     userDescription?: string
     mainTitle?: string

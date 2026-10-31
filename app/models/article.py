@@ -15,6 +15,8 @@ class Article(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment="id")
     task_id = Column("taskId", String(64), nullable=False, unique=True, comment="任务ID（UUID）")
     user_id = Column("userId", BigInteger, nullable=False, comment="用户ID")
+    product_id = Column("productId", BigInteger, nullable=True, comment="产品档案ID")
+    platform_id = Column("platformId", BigInteger, nullable=True, comment="营销平台ID")
     topic = Column(String(500), nullable=False, comment="选题")
     user_description = Column("userDescription", Text, nullable=True, comment="用户补充描述")
     enabled_image_methods = Column("enabledImageMethods", Text, nullable=True, comment="允许的配图方式列表（JSON格式）")

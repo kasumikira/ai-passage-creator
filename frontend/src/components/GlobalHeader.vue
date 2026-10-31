@@ -5,7 +5,7 @@
         <RouterLink to="/" class="logo-link">
           <div class="logo-wrapper">
             <img src="@/assets/logo.png" alt="Logo" class="logo-img" />
-            <h1 class="site-title">AI文章创作器</h1>
+            <h1 class="site-title">营销内容工作台</h1>
           </div>
         </RouterLink>
       </div>
@@ -63,7 +63,9 @@ import {
   EditOutlined,
   UnorderedListOutlined,
   SettingOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  DatabaseOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons-vue'
 
 const loginUserStore = useLoginUserStore()
@@ -90,7 +92,17 @@ const originItems = [
   {
     key: '/article/list',
     icon: UnorderedListOutlined,
-    label: '历史',
+    label: '内容历史',
+  },
+  {
+    key: '/marketing/library',
+    icon: DatabaseOutlined,
+    label: '资料库',
+  },
+  {
+    key: '/marketing/analytics',
+    icon: LineChartOutlined,
+    label: '营销数据',
   },
   {
     key: '/admin/userManage',

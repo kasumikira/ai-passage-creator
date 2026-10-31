@@ -45,24 +45,52 @@
           <div v-if="currentPhase === 'INPUT'" key="input" class="input-state">
           <div class="input-card">
             <div class="input-header">
-              <h1 class="input-title">创作新文章</h1>
-              <p class="input-subtitle">输入选题，AI 帮你生成爆款文章</p>
+              <h1 class="input-title">新建营销内容</h1>
+              <p class="input-subtitle">选择发布平台并关联产品，AI 按受众和规则完成创作</p>
             </div>
 
             <div class="input-area">
               <a-textarea
                 v-model:value="topic"
-                placeholder="请输入您想创作的文章选题，例如：2026年AI如何改变职场"
+                placeholder="描述本次营销主题或内容需求，例如：为换季护肤产品创作一条短视频脚本"
                 :rows="6"
                 :maxlength="500"
                 show-count
                 class="topic-textarea"
               />
 
+              <div class="context-select-grid">
+                <label class="context-field">
+                  <span>发布平台 <i>必选</i></span>
+                  <a-select v-model:value="selectedPlatformId" placeholder="选择内容发布平台">
+                    <a-select-option v-for="platform in platforms" :key="platform.id" :value="platform.id">
+                      {{ platform.name }}
+                    </a-select-option>
+                  </a-select>
+                </label>
+                <label class="context-field">
+                  <span>关联产品 <i>可选</i></span>
+                  <a-select
+                    v-model:value="selectedProductId"
+                    allow-clear
+                    placeholder="选择产品档案"
+                    :disabled="products.length === 0"
+                  >
+                    <a-select-option v-for="product in products" :key="product.id" :value="product.id">
+                      {{ product.name }}
+                    </a-select-option>
+                  </a-select>
+                </label>
+              </div>
+              <div v-if="selectedPlatform" class="context-hint">
+                AI 将遵循 {{ selectedPlatform.name }} 的受众特点、内容规则与推荐形式。
+                <span v-if="products.length === 0">可先到「资料库」上传产品文档。</span>
+              </div>
+
               <!-- 文章风格选择 -->
               <div class="style-section">
                 <div class="section-header">
-                  <span class="section-title">文章风格</span>
+                  <span class="section-title">表达风格</span>
                   <span class="section-tip">（不选择使用默认风格）</span>
                 </div>
                 <a-radio-group v-model:value="selectedStyle" class="style-group">
@@ -511,6 +539,7 @@ import {
 import { createArticle, confirmTitle, confirmOutline } from '@/api/articleController'
 import { connectSSE, closeSSE, type SSEMessage } from '@/utils/sse'
 import { marked } from 'marked'
+import { getMarketingPlatforms, getProductProfiles, type MarketingPlatform, type ProductProfile } from '@/api/marketingController'
 import TitleSelectingStage from './components/TitleSelectingStage.vue'
 import OutlineEditingStage from './components/OutlineEditingStage.vue'
 
@@ -545,6 +574,11 @@ const currentPhase = ref<string>('INPUT')  // INPUT, TITLE_SELECTING, OUTLINE_ED
 const topic = ref('')
 const selectedStyle = ref('')  // 选中的文章风格（空字符串表示默认）
 const selectedImageMethods = ref<string[]>([])  // 选中的配图方式（空数组表示全部）
+const platforms = ref<MarketingPlatform[]>([])
+const products = ref<ProductProfile[]>([])
+const selectedPlatformId = ref<number>()
+const selectedProductId = ref<number>()
+const selectedPlatform = computed(() => platforms.value.find((platform) => platform.id === selectedPlatformId.value))
 const isCreating = ref(false)
 const isCompleted = ref(false)
 const isStreaming = ref(false)
@@ -660,6 +694,10 @@ const startCreate = async () => {
     message.warning('请输入选题')
     return
   }
+  if (!selectedPlatformId.value) {
+    message.warning('请选择发布平台')
+    return
+  }
 
   isCreating.value = true
   currentStep.value = 0
@@ -671,6 +709,8 @@ const startCreate = async () => {
     const res = await createArticle({
       topic: topic.value,
       style: selectedStyle.value || undefined,
+      platformId: selectedPlatformId.value,
+      productId: selectedProductId.value,
       enabledImageMethods: selectedImageMethods.value.length > 0 ? selectedImageMethods.value : undefined
     })
     const newTaskId = res.data.data
@@ -920,9 +960,22 @@ const resetCreate = () => {
 }
 
 // 组件挂载时检查路由参数
-onMounted(() => {
+onMounted(async () => {
   if (route.query.topic) {
     topic.value = route.query.topic as string
+  }
+  try {
+    const [platformResponse, productResponse] = await Promise.all([
+      getMarketingPlatforms(),
+      getProductProfiles(),
+    ])
+    if (platformResponse.data.code === 0) {
+      platforms.value = platformResponse.data.data || []
+      selectedPlatformId.value = platforms.value[0]?.id
+    }
+    if (productResponse.data.code === 0) products.value = productResponse.data.data || []
+  } catch (error) {
+    message.error((error as Error).message || '加载营销资料失败')
   }
 })
 
@@ -1176,6 +1229,41 @@ onBeforeUnmount(() => {
   background: var(--color-background-secondary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
+}
+
+.context-select-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.context-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.context-field i {
+  margin-left: 5px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.context-hint {
+  margin-top: -8px;
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.context-hint span {
+  margin-left: 5px;
+  color: var(--color-text-muted);
 }
 
 .style-group {
@@ -1899,6 +1987,12 @@ onBeforeUnmount(() => {
 
   .main-content {
     padding: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  .context-select-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

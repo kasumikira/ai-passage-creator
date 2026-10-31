@@ -45,7 +45,9 @@ async def create_article(
         request.topic,
         current_user,
         request.style,
-        request.enabled_image_methods
+        request.enabled_image_methods,
+        request.product_id,
+        request.platform_id,
     )
     
     # 异步执行阶段1：生成标题方案

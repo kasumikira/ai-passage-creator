@@ -22,6 +22,7 @@ from app.schemas.article import (
 )
 from app.schemas.user import LoginUserVO
 from app.services.article_agent_service import ArticleAgentService
+from app.services.marketing_library_service import MarketingLibraryService
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +39,25 @@ class ArticleService:
         login_user: LoginUserVO,
         style: Optional[str] = None,
         enabled_image_methods: Optional[List[str]] = None,
+        product_id: Optional[int] = None,
+        platform_id: Optional[int] = None,
     ) -> str:
         """创建文章任务"""
+        if product_id or platform_id:
+            await MarketingLibraryService(self.db).load_creation_context(
+                login_user.id,
+                platform_id,
+                product_id,
+            )
         task_id = str(uuid.uuid4())
         now = datetime.now()
         query = """
             INSERT INTO article (
-                taskId, userId, topic, style, enabledImageMethods, status, phase, createTime
+                taskId, userId, topic, style, enabledImageMethods, productId, platformId, status, phase, createTime
             )
             VALUES (
-                :taskId, :userId, :topic, :style, :enabledImageMethods, :status, :phase, :createTime
+                :taskId, :userId, :topic, :style, :enabledImageMethods, :productId, :platformId,
+                :status, :phase, :createTime
             )
         """
         await self.db.execute(
@@ -60,6 +70,8 @@ class ArticleService:
                 "enabledImageMethods": json.dumps(enabled_image_methods, ensure_ascii=False)
                 if enabled_image_methods
                 else None,
+                "productId": product_id,
+                "platformId": platform_id,
                 "status": ArticleStatusEnum.PENDING.value,
                 "phase": ArticlePhaseEnum.PENDING.value,
                 "createTime": now,
@@ -292,6 +304,11 @@ class ArticleService:
         throw_if(not article["outline"], ErrorCode.OPERATION_ERROR, "当前文章尚未生成大纲")
 
         current_outline = [OutlineSection(**item) for item in json.loads(article["outline"])]
+        marketing_context = await MarketingLibraryService(self.db).load_creation_context(
+            article["userId"],
+            article["platformId"],
+            article["productId"],
+        )
         agent_service = ArticleAgentService()
         modified_outline = await agent_service.ai_modify_outline(
             task_id=task_id,
@@ -299,6 +316,7 @@ class ArticleService:
             sub_title=article["subTitle"],
             current_outline=current_outline,
             modify_suggestion=modify_suggestion,
+            marketing_context=marketing_context["prompt"],
         )
         await self.db.execute(
             query="UPDATE article SET outline = :outline WHERE taskId = :taskId",
@@ -363,6 +381,8 @@ class ArticleService:
             id=article_dict["id"],
             taskId=article_dict["taskId"],
             userId=article_dict["userId"],
+            productId=article_dict.get("productId"),
+            platformId=article_dict.get("platformId"),
             topic=article_dict["topic"],
             userDescription=article_dict.get("userDescription"),
             style=article_dict.get("style"),

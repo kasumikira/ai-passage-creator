@@ -11,6 +11,8 @@ class ArticleCreateRequest(BaseModel):
 
     topic: str = Field(..., min_length=1, description="选题")
     style: Optional[str] = Field(None, description="文章风格：tech/emotional/educational/humorous")
+    product_id: Optional[int] = Field(None, alias="productId", description="产品档案 ID")
+    platform_id: int = Field(..., alias="platformId", ge=1, description="营销平台 ID")
     enabled_image_methods: Optional[List[str]] = Field(
         None,
         alias="enabledImageMethods",
@@ -44,6 +46,8 @@ class ArticleVO(BaseModel):
     id: int
     task_id: str = Field(..., alias="taskId")
     user_id: int = Field(..., alias="userId")
+    product_id: Optional[int] = Field(None, alias="productId")
+    platform_id: Optional[int] = Field(None, alias="platformId")
     topic: str
     user_description: Optional[str] = Field(None, alias="userDescription")
     style: Optional[str] = None
@@ -149,6 +153,10 @@ class ArticleState:
         self.images: Optional[List[ImageResult]] = None
         self.cover_image: Optional[str] = None
         self.full_content: Optional[str] = None
+        self.owner_id: Optional[int] = None
+        self.product_id: Optional[int] = None
+        self.platform_id: Optional[int] = None
+        self.marketing_context: Optional[str] = None
 
 
 class ArticleConfirmTitleRequest(BaseModel):

@@ -10,6 +10,7 @@ from app.services.article_agent_service import ArticleAgentService
 from app.services.article_service import ArticleService
 from app.managers.sse_manager import sse_emitter_manager
 from app.database import database
+from app.services.marketing_library_service import MarketingLibraryService
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,9 @@ class ArticleAsyncService:
         article_service = ArticleService(database)
 
         try:
+            article = await article_service.get_by_task_id(task_id)
+            if not article:
+                raise RuntimeError("文章不存在")
             await article_service.update_article_status(task_id, ArticleStatusEnum.PROCESSING)
             await article_service.update_phase(task_id, ArticlePhaseEnum.TITLE_GENERATING)
 
@@ -36,6 +40,7 @@ class ArticleAsyncService:
             state.task_id = task_id
             state.topic = topic
             state.style = style
+            await self._load_marketing_context(state, article)
 
             await article_agent_service.execute_phase1_generate_titles(
                 state,
@@ -84,6 +89,7 @@ class ArticleAsyncService:
             state = ArticleState()
             state.task_id = task_id
             state.style = article["style"]
+            await self._load_marketing_context(state, article)
             state.user_description = article["userDescription"]
             state.title = TitleResult(
                 mainTitle=article["mainTitle"],
@@ -128,6 +134,7 @@ class ArticleAsyncService:
             state = ArticleState()
             state.task_id = task_id
             state.style = article["style"]
+            await self._load_marketing_context(state, article)
             state.enabled_image_methods = (
                 json.loads(article["enabledImageMethods"])
                 if article["enabledImageMethods"]
@@ -166,6 +173,17 @@ class ArticleAsyncService:
         data = self._build_message_data(message, state)
         if data is not None:
             sse_emitter_manager.send(task_id, json.dumps(data, ensure_ascii=False))
+
+    async def _load_marketing_context(self, state: ArticleState, article):
+        state.owner_id = article["userId"]
+        state.product_id = article["productId"]
+        state.platform_id = article["platformId"]
+        context = await MarketingLibraryService(database).load_creation_context(
+            state.owner_id,
+            state.platform_id,
+            state.product_id,
+        )
+        state.marketing_context = context["prompt"]
     
     def _build_message_data(self, message: str, state: ArticleState) -> Dict[str, Any]:
         """构建消息数据"""

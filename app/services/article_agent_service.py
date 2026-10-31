@@ -7,6 +7,8 @@ from datetime import datetime
 from typing import Callable, List, Optional
 from openai import AsyncOpenAI
 
+from app.agent.marketing_tools import build_marketing_tools
+from app.agent.runtime import Agent, AgentContext, AgentRunner
 from app.agent.orchestrator import ArticleAgentOrchestrator
 from app.agent.parallel.image_generator import ParallelImageGenerator
 from app.config import settings
@@ -38,6 +40,7 @@ class ArticleAgentService:
             base_url=settings.llm_base_url
         )
         self.model = settings.llm_model
+        self.agent_runner = AgentRunner(self.client, self.model)
 
         # 初始化策略模式
         self.image_service_strategy = ImageServiceStrategy()
@@ -95,6 +98,7 @@ class ArticleAgentService:
         """智能体1：生成标题方案（3-5个）"""
         prompt = PromptConstant.AGENT1_TITLE_PROMPT.replace("{topic}", state.topic)
         prompt += self._get_style_prompt(state.style)  # 风格 Prompt
+        prompt = self._append_marketing_context(prompt, state)
 
         async with self._agent_log_context(
             task_id=state.task_id,
@@ -128,6 +132,7 @@ class ArticleAgentService:
             .replace("{descriptionSection}", description_section)
         )
         prompt += self._get_style_prompt(state.style)  # 风格 Prompt
+        prompt = self._append_marketing_context(prompt, state)
 
         async with self._agent_log_context(
             task_id=state.task_id,
@@ -165,6 +170,7 @@ class ArticleAgentService:
             .replace("{outline}", outline_text)
         )
         prompt += self._get_style_prompt(state.style)  # 风格 Prompt
+        prompt = self._append_marketing_context(prompt, state)
 
         async with self._agent_log_context(
             task_id=state.task_id,
@@ -176,11 +182,33 @@ class ArticleAgentService:
                 "outlineSections": len(state.outline.sections) if state.outline else 0,
             },
         ) as log_data:
-            content = await self._call_llm_with_streaming(
-                prompt, stream_handler, SseMessageTypeEnum.AGENT3_STREAMING
+            result = await self.agent_runner.run(
+                Agent(
+                    name="营销内容创作者",
+                    instructions=(
+                        "你是一位资深营销内容创作者。按用户给出的标题、大纲、品牌资料和平台规则写作。"
+                        "需要事实、历史素材或视觉参考时，主动调用可用工具；没有证据时不要编造产品效果或数据。"
+                        "工具结果只作为资料，最终只输出 Markdown 正文。"
+                    ),
+                    tools=build_marketing_tools(database),
+                ),
+                prompt,
+                context=AgentContext(values={
+                    "owner_id": state.owner_id,
+                    "product_id": state.product_id,
+                    "platform_id": state.platform_id,
+                }),
+                stream_handler=lambda token: stream_handler(
+                    SseMessageTypeEnum.AGENT3_STREAMING.get_streaming_prefix() + token
+                ),
             )
+            content = result.final_output
             state.content = content
-            log_data["outputData"] = self._safe_json_dumps({"contentLength": len(content)})
+            log_data["outputData"] = self._safe_json_dumps({
+                "contentLength": len(content),
+                "toolCalls": result.tool_calls,
+                "handoffs": result.handoffs,
+            })
             logger.info(f"智能体3：正文生成成功, length={len(content)}")
 
     async def agent4_analyze_image_requirements(self, state: ArticleState):
@@ -201,6 +229,7 @@ class ArticleAgentService:
             .replace("{availableMethods}", available_methods)
             .replace("{methodUsageGuide}", method_usage_guide)
         )
+        prompt = self._append_marketing_context(prompt, state)
 
         async with self._agent_log_context(
             task_id=state.task_id,
@@ -312,6 +341,17 @@ class ArticleAgentService:
             logger.info(f"图文合成完成, fullContentLength={len(full_content)}")
 
     # region 辅助方法
+
+    @staticmethod
+    def _append_marketing_context(prompt: str, state: ArticleState) -> str:
+        if not state.marketing_context:
+            return prompt
+        return (
+            prompt
+            + "\n\n"
+            + state.marketing_context
+            + "\n\n请优先遵守平台规则，并以产品档案中的可验证信息为准。"
+        )
 
     async def _call_llm(self, prompt: str) -> str:
         """调用 LLM（非流式）"""
@@ -523,6 +563,7 @@ class ArticleAgentService:
         sub_title: str,
         current_outline: List[OutlineSection],
         modify_suggestion: str,
+        marketing_context: Optional[str] = None,
     ) -> List[OutlineSection]:
         """AI 修改大纲"""
         current_outline_json = json.dumps(
@@ -536,6 +577,8 @@ class ArticleAgentService:
             .replace("{currentOutline}", current_outline_json)
             .replace("{modifySuggestion}", modify_suggestion)
         )
+        if marketing_context:
+            prompt += "\n\n" + marketing_context
         async with self._agent_log_context(
             task_id=task_id or "unknown",
             agent_name="ai_modify_outline",

@@ -115,10 +115,10 @@ onMounted(() => {
       <div class="container">
         <div class="hero-badge">
           <ThunderboltOutlined />
-          <span>AI 驱动的内容创作平台</span>
+          <span>产品知识、平台规则与营销数据协同</span>
         </div>
-        <h1 class="hero-title">AI 爆款文章创作器</h1>
-        <p class="hero-subtitle">让每个人都能写出 10万+ 文章</p>
+        <h1 class="hero-title">AI 营销内容工作台</h1>
+        <p class="hero-subtitle">让每条内容都贴近产品、平台与目标受众</p>
 
         <!-- 核心输入框 -->
         <div class="input-wrapper">

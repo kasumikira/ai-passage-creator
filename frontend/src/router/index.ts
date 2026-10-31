@@ -23,6 +23,16 @@ const router = createRouter({
       component: () => import('@/pages/article/ArticleListPage.vue'),
     },
     {
+      path: '/marketing/library',
+      name: '营销资料库',
+      component: () => import('@/pages/marketing/MarketingLibraryPage.vue'),
+    },
+    {
+      path: '/marketing/analytics',
+      name: '营销效果',
+      component: () => import('@/pages/marketing/MarketingAnalyticsPage.vue'),
+    },
+    {
       path: '/article/:taskId',
       name: '文章详情',
       component: () => import('@/pages/article/ArticleDetailPage.vue'),
