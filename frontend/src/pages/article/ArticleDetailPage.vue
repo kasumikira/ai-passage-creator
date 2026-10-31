@@ -195,9 +195,9 @@ import {
   ThunderboltOutlined
 } from '@ant-design/icons-vue'
 import { getArticle, getExecutionLogs } from '@/api/articleController'
-import { exportAsMarkdown } from '@/utils/article'
+import { exportAsMarkdown, getStatusText, getStatusTagColor as getStatusColor } from '@/utils/article'
 import { markdownToHtml, resolveArticleImageUrl } from '@/utils/markdown'
-import dayjs from 'dayjs'
+import { formatDateFull as formatDate } from '@/utils/date'
 
 const router = useRouter()
 const route = useRoute()
@@ -263,33 +263,6 @@ const exportMarkdown = async () => {
   } catch (error) {
     message.error((error as Error).message || '导出失败')
   }
-}
-
-// 格式化日期
-const formatDate = (date: string) => {
-  return dayjs(date).format('YYYY-MM-DD HH:mm:ss')
-}
-
-// 获取状态颜色
-const getStatusColor = (status: string) => {
-  const colorMap: Record<string, string> = {
-    PENDING: 'default',
-    PROCESSING: 'processing',
-    COMPLETED: 'success',
-    FAILED: 'error',
-  }
-  return colorMap[status] || 'default'
-}
-
-// 获取状态文本
-const getStatusText = (status: string) => {
-  const textMap: Record<string, string> = {
-    PENDING: '等待中',
-    PROCESSING: '生成中',
-    COMPLETED: '已完成',
-    FAILED: '失败',
-  }
-  return textMap[status] || status
 }
 
 // 获取智能体显示名称

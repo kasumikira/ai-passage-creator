@@ -8,10 +8,10 @@ const renderer = new marked.Renderer()
 const defaultImageRenderer = renderer.image.bind(renderer)
 
 const escapeHtmlAttribute = (value: string) => value
-  .replaceAll('&', '&amp;')
-  .replaceAll('"', '&quot;')
-  .replaceAll('<', '&lt;')
-  .replaceAll('>', '&gt;')
+  .replace(/&/g, '&amp;')
+  .replace(/"/g, '&quot;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
 
 export const resolveArticleImageUrl = (imageReference?: string): string => {
   if (!imageReference) return ''

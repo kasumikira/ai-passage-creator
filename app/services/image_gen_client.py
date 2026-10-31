@@ -35,45 +35,41 @@ class GoogleGenAiImageProvider:
         self.model = settings.image_gen_model
 
     async def generate(self, prompt: str) -> ImageData | None:
-        try:
-            # Gemini 3 Pro Image 支持更高分辨率
-            image_config_params = {"aspect_ratio": settings.image_gen_aspect_ratio}
-            if "gemini-3-pro" in self.model:
-                image_config_params["image_size"] = settings.image_gen_image_size
+        # Gemini 3 Pro Image 支持更高分辨率
+        image_config_params = {"aspect_ratio": settings.image_gen_aspect_ratio}
+        if "gemini-3-pro" in self.model:
+            image_config_params["image_size"] = settings.image_gen_image_size
 
-            config = types.GenerateContentConfig(
-                response_modalities=["TEXT", "IMAGE"],
-                image_config=types.ImageConfig(**image_config_params)
-            )
+        config = types.GenerateContentConfig(
+            response_modalities=["TEXT", "IMAGE"],
+            image_config=types.ImageConfig(**image_config_params)
+        )
 
-            logger.info(
-                f"Google GenAI 开始生成图片, model={self.model}, prompt={prompt}"
-            )
+        logger.info(
+            f"Google GenAI 开始生成图片, model={self.model}, prompt={prompt}"
+        )
 
-            response = await self.client.aio.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=config
-            )
+        response = await self.client.aio.models.generate_content(
+            model=self.model,
+            contents=prompt,
+            config=config
+        )
 
-            # 从响应中提取图片数据
-            if response.candidates and response.candidates[0].content.parts:
-                for part in response.candidates[0].content.parts:
-                    if part.inline_data:
-                        image_bytes = part.inline_data.data
-                        mime_type = part.inline_data.mime_type or "image/png"
+        # 从响应中提取图片数据
+        if response.candidates and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if part.inline_data:
+                    image_bytes = part.inline_data.data
+                    mime_type = part.inline_data.mime_type or "image/png"
 
-                        logger.info(
-                            f"Google GenAI 图片生成成功, "
-                            f"size={len(image_bytes)} bytes, mimeType={mime_type}"
-                        )
-                        return ImageData.from_bytes(image_bytes, mime_type)
+                    logger.info(
+                        f"Google GenAI 图片生成成功, "
+                        f"size={len(image_bytes)} bytes, mimeType={mime_type}"
+                    )
+                    return ImageData.from_bytes(image_bytes, mime_type)
 
-            logger.error("Google GenAI 响应中未找到图片数据")
-            return None
-        except Exception as e:
-            logger.error(f"Google GenAI 生成图片异常: {e}")
-            return None
+        logger.error("Google GenAI 响应中未找到图片数据")
+        return None
 
 
 class OpenAiCompatImageProvider:
@@ -99,41 +95,37 @@ class OpenAiCompatImageProvider:
             return "1024x1024"
 
     async def generate(self, prompt: str) -> ImageData | None:
-        try:
-            logger.info(
-                f"OpenAI images 开始生成图片, model={self.model}, prompt={prompt}"
-            )
+        logger.info(
+            f"OpenAI images 开始生成图片, model={self.model}, prompt={prompt}"
+        )
 
-            response = await self.client.images.generate(
-                model=self.model,
-                prompt=prompt,
-                size=self._map_size()
-            )
+        response = await self.client.images.generate(
+            model=self.model,
+            prompt=prompt,
+            size=self._map_size()
+        )
 
-            item = response.data[0] if response.data else None
-            if item is None:
-                logger.error("OpenAI images 响应中未找到图片数据")
-                return None
-
-            # 优先使用 base64 数据，其次下载 URL
-            if item.b64_json:
-                image_bytes = base64.b64decode(item.b64_json)
-                logger.info(f"OpenAI images 图片生成成功, size={len(image_bytes)} bytes")
-                return ImageData.from_bytes(image_bytes, "image/png")
-
-            if item.url:
-                async with httpx.AsyncClient(timeout=60.0) as http:
-                    resp = await http.get(item.url)
-                    resp.raise_for_status()
-                mime_type = resp.headers.get("content-type", "image/png").split(";")[0]
-                logger.info(f"OpenAI images 图片下载成功, size={len(resp.content)} bytes")
-                return ImageData.from_bytes(resp.content, mime_type)
-
-            logger.error("OpenAI images 响应中既无 b64_json 也无 url")
+        item = response.data[0] if response.data else None
+        if item is None:
+            logger.error("OpenAI images 响应中未找到图片数据")
             return None
-        except Exception as e:
-            logger.error(f"OpenAI images 生成图片异常: {e}")
-            return None
+
+        # 优先使用 base64 数据，其次下载 URL
+        if item.b64_json:
+            image_bytes = base64.b64decode(item.b64_json)
+            logger.info(f"OpenAI images 图片生成成功, size={len(image_bytes)} bytes")
+            return ImageData.from_bytes(image_bytes, "image/png")
+
+        if item.url:
+            async with httpx.AsyncClient(timeout=60.0) as http:
+                resp = await http.get(item.url)
+                resp.raise_for_status()
+            mime_type = resp.headers.get("content-type", "image/png").split(";")[0]
+            logger.info(f"OpenAI images 图片下载成功, size={len(resp.content)} bytes")
+            return ImageData.from_bytes(resp.content, mime_type)
+
+        logger.error("OpenAI images 响应中既无 b64_json 也无 url")
+        return None
 
 
 class ImageGenClient:
@@ -157,5 +149,5 @@ class ImageGenClient:
         logger.info("生图客户端初始化完成, format=%s, model=%s", self.format, self.model)
 
     async def generate(self, prompt: str) -> ImageData | None:
-        """根据提示词生成图片数据，失败返回 None"""
+        """根据提示词生成图片数据；请求异常直接向上传播。"""
         return await self._provider.generate(prompt)

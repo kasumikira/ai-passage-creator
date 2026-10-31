@@ -67,9 +67,10 @@ class Settings(BaseSettings):
     iconify_default_color: str = ""
 
     # 表情包配置
-    emoji_pack_search_url: str = "https://cn.bing.com/images/async"
-    emoji_pack_suffix: str = "表情包"
-    emoji_pack_timeout: int = 10000
+    meme_search_url: str = "https://cn.bing.com/images/async"
+    meme_suffix: str = "表情包"
+    meme_timeout: int = 10000
+    meme_default_limit: int = 3
 
     # SVG 示意图配置
     svg_diagram_default_width: int = 800
@@ -78,7 +79,6 @@ class Settings(BaseSettings):
 
     # 多智能体并行编排配置
     agent_image_max_concurrency: int = 3
-    agent_image_fail_fast: bool = True
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),

@@ -34,7 +34,7 @@ AI 营销内容工作台把产品知识、发布平台规则和历史营销资�
 | 🗂️ 营销资料库 | 产品档案和平台受众/规则保存在数据库 | 内容贴近产品和渠道 |
 | 🔎 营销检索工具 | 互联网、图片、产品档案、历史内容和营销数据检索 | 让 AI 使用已有知识和数据 |
 | 📊 营销效果分析 | mock 数据仪表盘与 AI 归因建议 | 展示指标并用于后续创作 |
-| 🎨 多元配图 | 6 种配图策略 + 自动降级 | 图文并茂，永不中断 |
+| 🎨 多元配图 | 6 种配图策略 | 配图失败时明确报告错误 |
 | 📡 实时流式输出 | SSE 推送大纲/正文创作过程 | 所见即所得 |
 | 🧑‍💻 人机协作 | 三阶段创作，每步可介入 | 创作可控 |
 | ⚡ 异步高性能 | FastAPI 全异步栈 + Redis 缓存 | 响应迅速 |
@@ -61,12 +61,11 @@ AI 营销内容工作台把产品知识、发布平台规则和历史营销资�
 | Pexels | 高质量图库检索 | 关键词检索 |
 | Mermaid | 流程图/架构图生成 | AI Prompt 生成 |
 | Iconify | 图标库检索 | 关键词检索 |
-| 表情包 | Bing 图片搜索 | 关键词检索 |
+| 表情包 | Bing 图片搜索 | AI 工具检索候选图 |
 | Nano Banana | Gemini AI 生图 | AI Prompt 生成 |
 | SVG Diagram | AI 概念示意图 | AI Prompt 生成 |
-| Picsum | 随机图片 | 降级方案（自动触发） |
 
-> 当配图方式失败时，系统会自动降级到 Picsum 随机图片，确保文章生成不中断。
+> 配图服务不可用、请求失败或存储失败时会明确报错，不会以随机图片替代。单张配图失败不影响其他配图，成功结果保留，失败项记录完整异常；全部配图失败时任务报错。
 
 ### 文章风格
 
@@ -81,6 +80,7 @@ AI 营销内容工作台把产品知识、发布平台规则和历史营销资�
 
 | 消息类型 | 说明 |
 |---------|------|
+| `AGENT_REASONING_STREAMING` | 模型返回的实时推理内容（标题、大纲、正文、配图分析、SVG 配图和 AI 修改大纲） |
 | `AGENT1_COMPLETE` | 标题方案生成完成 |
 | `AGENT2_STREAMING` | 大纲流式输出中 |
 | `AGENT2_COMPLETE` | 大纲生成完成 |
@@ -243,7 +243,7 @@ npm run dev
 │   │   ├── article_service.py         # 文章状态流转
 │   │   ├── article_async_service.py   # 异步阶段任务
 │   │   ├── image_service_strategy.py  # 配图策略选择器
-│   │   ├── pexels / mermaid / iconify / emoji_pack / nano_banana / svg_diagram_service.py
+│   │   ├── pexels / mermaid / iconify / meme_service / nano_banana / svg_diagram_service.py
 │   │   ├── cos_service.py             # COS 上传
 │   │   ├── user_service.py / statistics_service.py
 │   │   └── agent_log_service.py       # 智能体执行日志
@@ -326,7 +326,7 @@ class ImageMethodEnum(str, Enum):
     NANO_BANANA = "NANO_BANANA"
     MERMAID = "MERMAID"
     ICONIFY = "ICONIFY"
-    EMOJI_PACK = "EMOJI_PACK"
+    MEME = "MEME"
     SVG_DIAGRAM = "SVG_DIAGRAM"
     PICSUM = "PICSUM"       # 降级方案
 ```

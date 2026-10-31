@@ -69,14 +69,16 @@ class SseEmitterManager:
                     yield f"data: {message}\n\n"
             except asyncio.CancelledError:
                 logger.info(f"SSE 连接被取消, taskId={task_id}")
-            except Exception as e:
-                logger.error(f"SSE 连接错误, taskId={task_id}, error={e}")
+                raise
+            except Exception:
+                logger.exception("SSE 连接错误, taskId=%s", task_id)
+                raise
             finally:
-                # 清理队列
-                if task_id in self._queues:
+                # 只清理订阅队列，文章生成任务由 ArticleAsyncService 独立持有。
+                if self._queues.get(task_id) is queue:
                     del self._queues[task_id]
-                self._connected.discard(task_id)
-                self._cancel_unconnected_cleanup(task_id)
+                    self._connected.discard(task_id)
+                    self._cancel_unconnected_cleanup(task_id)
                 logger.info(f"SSE 连接已关闭, taskId={task_id}")
         
         return StreamingResponse(
@@ -99,14 +101,20 @@ class SseEmitterManager:
         """
         queue = self._queues.get(task_id)
         if queue is None:
-            logger.warning(f"SSE Emitter 不存在, taskId={task_id}")
+            logger.debug("SSE 无订阅者，跳过推送, taskId=%s", task_id)
             return
         
         try:
             queue.put_nowait(message)
-            logger.debug(f"SSE 消息发送成功, taskId={task_id}")
-        except Exception as e:
-            logger.error(f"SSE 消息发送失败, taskId={task_id}, error={e}")
+        except Exception:
+            # 推送失败只影响当前订阅，不能中断文章生成和结果保存。
+            logger.exception("SSE 推送失败，后台生成继续, taskId=%s", task_id)
+            if self._queues.get(task_id) is queue:
+                self._queues.pop(task_id, None)
+                self._connected.discard(task_id)
+                self._cancel_unconnected_cleanup(task_id)
+            return
+        logger.debug("SSE 消息发送成功, taskId=%s", task_id)
     
     def complete(self, task_id: str):
         """
@@ -115,17 +123,9 @@ class SseEmitterManager:
         Args:
             task_id: 任务ID
         """
-        queue = self._queues.get(task_id)
-        if queue is None:
-            logger.warning(f"SSE Emitter 不存在, taskId={task_id}")
-            return
-        
-        try:
-            queue.put_nowait("__COMPLETE__")
-            logger.info(f"SSE 连接已完成, taskId={task_id}")
-        except Exception as e:
-            logger.error(f"SSE 连接完成失败, taskId={task_id}, error={e}")
-    
+        self.send(task_id, "__COMPLETE__")
+        logger.debug("SSE 完成信号已处理, taskId=%s", task_id)
+
     def exists(self, task_id: str) -> bool:
         """
         检查 Emitter 是否存在

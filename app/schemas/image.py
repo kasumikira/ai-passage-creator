@@ -15,6 +15,7 @@ class ImageRequest(BaseModel):
     type: Optional[str] = Field(None, description="图片类型（cover/section）")
     aspect_ratio: Optional[str] = Field(None, description="宽高比（如 16:9, 1:1）")
     style: Optional[str] = Field(None, description="图片风格描述")
+    resolved_url: Optional[str] = Field(None, description="已解析的图片 URL 或 data URL（内部使用）")
 
     def get_effective_param(self, is_ai_generated: bool) -> str:
         """

@@ -50,36 +50,32 @@ class MermaidService(ImageSearchService):
             logger.warning("Mermaid 代码为空")
             return None
 
-        try:
-            diagram = mermaidx.render(mermaid_code)
-            output_format = self.output_format.lower()
-            if output_format == "svg":
-                image_bytes = diagram.svg().encode("utf-8")
-            elif output_format == "png":
-                image_bytes = diagram.png(
-                    width=self.width,
-                    background=self.background_color,
-                )
-            elif output_format == "pdf":
-                image_bytes = diagram.pdf(
-                    width=self.width,
-                    background=self.background_color,
-                )
-            else:
-                raise ValueError(f"不支持的 Mermaid 输出格式: {self.output_format}")
-
-            # 确定 MIME 类型
-            mime_type = self._get_mime_type()
-
-            logger.info(
-                f"Mermaid 图表生成成功, size={len(image_bytes)} bytes, "
-                f"format={self.output_format}"
+        diagram = mermaidx.render(mermaid_code)
+        output_format = self.output_format.lower()
+        if output_format == "svg":
+            image_bytes = diagram.svg().encode("utf-8")
+        elif output_format == "png":
+            image_bytes = diagram.png(
+                width=self.width,
+                background=self.background_color,
             )
+        elif output_format == "pdf":
+            image_bytes = diagram.pdf(
+                width=self.width,
+                background=self.background_color,
+            )
+        else:
+            raise ValueError(f"不支持的 Mermaid 输出格式: {self.output_format}")
 
-            return ImageData.from_bytes(image_bytes, mime_type)
-        except Exception as e:
-            logger.error(f"Mermaid 图表生成异常: {e}")
-            return None
+        # 确定 MIME 类型
+        mime_type = self._get_mime_type()
+
+        logger.info(
+            f"Mermaid 图表生成成功, size={len(image_bytes)} bytes, "
+            f"format={self.output_format}"
+        )
+
+        return ImageData.from_bytes(image_bytes, mime_type)
 
     def _get_mime_type(self) -> str:
         """根据输出格式获取 MIME 类型"""

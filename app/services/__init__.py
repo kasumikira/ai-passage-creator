@@ -8,7 +8,7 @@ from app.services.pexels_service import PexelsService
 from app.services.nano_banana_service import NanoBananaService
 from app.services.mermaid_service import MermaidService
 from app.services.iconify_service import IconifyService
-from app.services.emoji_pack_service import EmojiPackService
+from app.services.meme_service import MemeService
 from app.services.svg_diagram_service import SvgDiagramService
 from app.services.image_service_strategy import ImageServiceStrategy
 from app.services.image_search_service import ImageSearchService
@@ -24,7 +24,7 @@ __all__ = [
     "NanoBananaService",
     "MermaidService",
     "IconifyService",
-    "EmojiPackService",
+    "MemeService",
     "SvgDiagramService",
     "ImageServiceStrategy",
     "ImageSearchService",

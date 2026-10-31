@@ -1,7 +1,9 @@
 """文章异步任务服务"""
 
+import asyncio
 import json
 import logging
+from collections.abc import Coroutine
 from typing import Any, Dict, Optional
 
 from app.schemas.article import ArticleState, OutlineSection, OutlineResult, TitleResult
@@ -18,6 +20,27 @@ logger = logging.getLogger(__name__)
 class ArticleAsyncService:
     """文章异步任务服务"""
 
+    def __init__(self):
+        # 应用持有生成任务，不能让其生命周期依赖 HTTP/SSE 连接。
+        self._tasks: set[asyncio.Task] = set()
+
+    def start_task(self, coroutine: Coroutine[Any, Any, None], *, name: str):
+        task = asyncio.create_task(coroutine, name=name)
+        self._tasks.add(task)
+        task.add_done_callback(self._on_task_done)
+
+    def _on_task_done(self, task: asyncio.Task):
+        self._tasks.discard(task)
+        if task.cancelled():
+            logger.warning("文章后台任务被取消, task=%s", task.get_name())
+            return
+        error = task.exception()
+        if error is not None:
+            logger.error(
+                "文章后台任务异常退出, task=%s", task.get_name(),
+                exc_info=(type(error), error, error.__traceback__),
+            )
+
     async def execute_phase1(
         self,
         task_id: str,
@@ -26,10 +49,10 @@ class ArticleAsyncService:
     ):
         """阶段1：异步生成标题方案"""
         logger.info("阶段1异步任务开始, taskId=%s, topic=%s, style=%s", task_id, topic, style)
-        article_agent_service = ArticleAgentService()
         article_service = ArticleService(database)
 
         try:
+            article_agent_service = ArticleAgentService()
             article = await article_service.get_by_task_id(task_id)
             if not article:
                 raise RuntimeError("文章不存在")
@@ -61,27 +84,17 @@ class ArticleAsyncService:
             )
 
             logger.info("阶段1异步任务完成, taskId=%s", task_id)
-        except Exception as e:
-            logger.error("阶段1异步任务失败, taskId=%s, error=%s", task_id, e)
-            await article_service.update_article_status(
-                task_id,
-                ArticleStatusEnum.FAILED,
-                str(e)
-            )
-            self._send_sse_message(
-                task_id,
-                SseMessageTypeEnum.ERROR,
-                {"message": str(e)}
-            )
-            sse_emitter_manager.complete(task_id)
+        except Exception as exc:
+            logger.exception("阶段1异步任务失败, taskId=%s", task_id)
+            await self._handle_failure(task_id, article_service, exc)
 
     async def execute_phase2(self, task_id: str):
         """阶段2：异步生成大纲"""
         logger.info("阶段2异步任务开始, taskId=%s", task_id)
-        article_agent_service = ArticleAgentService()
         article_service = ArticleService(database)
 
         try:
+            article_agent_service = ArticleAgentService()
             article = await article_service.get_by_task_id(task_id)
             if not article:
                 raise RuntimeError("文章不存在")
@@ -113,19 +126,17 @@ class ArticleAsyncService:
                 },
             )
             logger.info("阶段2异步任务完成, taskId=%s", task_id)
-        except Exception as e:
-            logger.error("阶段2异步任务失败, taskId=%s, error=%s", task_id, e)
-            await article_service.update_article_status(task_id, ArticleStatusEnum.FAILED, str(e))
-            self._send_sse_message(task_id, SseMessageTypeEnum.ERROR, {"message": str(e)})
-            sse_emitter_manager.complete(task_id)
+        except Exception as exc:
+            logger.exception("阶段2异步任务失败, taskId=%s", task_id)
+            await self._handle_failure(task_id, article_service, exc)
 
     async def execute_phase3(self, task_id: str):
         """阶段3：异步生成正文与配图"""
         logger.info("阶段3异步任务开始, taskId=%s", task_id)
-        article_agent_service = ArticleAgentService()
         article_service = ArticleService(database)
 
         try:
+            article_agent_service = ArticleAgentService()
             article = await article_service.get_by_task_id(task_id)
             if not article:
                 raise RuntimeError("文章不存在")
@@ -162,10 +173,18 @@ class ArticleAsyncService:
             )
             sse_emitter_manager.complete(task_id)
             logger.info("阶段3异步任务完成, taskId=%s", task_id)
-        except Exception as e:
-            logger.error("阶段3异步任务失败, taskId=%s, error=%s", task_id, e)
-            await article_service.update_article_status(task_id, ArticleStatusEnum.FAILED, str(e))
-            self._send_sse_message(task_id, SseMessageTypeEnum.ERROR, {"message": str(e)})
+        except Exception as exc:
+            logger.exception("阶段3异步任务失败, taskId=%s", task_id)
+            await self._handle_failure(task_id, article_service, exc)
+
+    async def _handle_failure(self, task_id: str, article_service: ArticleService, error: Exception):
+        """状态写入失败时，仍通知客户端并结束事件流。"""
+        try:
+            await article_service.update_article_status(
+                task_id, ArticleStatusEnum.FAILED, str(error)
+            )
+        finally:
+            self._send_sse_message(task_id, SseMessageTypeEnum.ERROR, {"message": str(error)})
             sse_emitter_manager.complete(task_id)
 
     def _handle_agent_message(self, task_id: str, message: str, state: ArticleState):
@@ -185,11 +204,12 @@ class ArticleAsyncService:
         )
         state.marketing_context = context["prompt"]
     
-    def _build_message_data(self, message: str, state: ArticleState) -> Dict[str, Any]:
+    def _build_message_data(self, message: str, state: ArticleState) -> Optional[Dict[str, Any]]:
         """构建消息数据"""
         # 处理流式消息（带冒号分隔符）
         streaming_prefix2 = SseMessageTypeEnum.AGENT2_STREAMING.get_streaming_prefix()
         streaming_prefix3 = SseMessageTypeEnum.AGENT3_STREAMING.get_streaming_prefix()
+        reasoning_prefix = SseMessageTypeEnum.AGENT_REASONING_STREAMING.get_streaming_prefix()
         image_complete_prefix = SseMessageTypeEnum.IMAGE_COMPLETE.get_streaming_prefix()
         
         if message.startswith(streaming_prefix2):
@@ -202,6 +222,12 @@ class ArticleAsyncService:
             return self._build_streaming_data(
                 SseMessageTypeEnum.AGENT3_STREAMING,
                 message[len(streaming_prefix3):]
+            )
+
+        if message.startswith(reasoning_prefix):
+            return self._build_streaming_data(
+                SseMessageTypeEnum.AGENT_REASONING_STREAMING,
+                message[len(reasoning_prefix):]
             )
 
         tool_call_prefix = SseMessageTypeEnum.TOOL_CALL.get_streaming_prefix()
@@ -235,7 +261,7 @@ class ArticleAsyncService:
             "image": json.loads(image_json)
         }
     
-    def _build_complete_message_data(self, message: str, state: ArticleState) -> Dict[str, Any]:
+    def _build_complete_message_data(self, message: str, state: ArticleState) -> Optional[Dict[str, Any]]:
         """构建完成消息数据"""
         data = {}
         

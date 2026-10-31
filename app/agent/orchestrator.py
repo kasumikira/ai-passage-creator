@@ -42,7 +42,7 @@ class ArticleAgentOrchestrator:
             "started",
             "结合选题、平台受众和产品资料，整理多个标题方向。",
         )
-        await self.title_agent.run(service, state)
+        await self.title_agent.run(service, state, stream_context.emit)
         stream_context.emit_progress(
             "agent1_generate_titles",
             "标题策划",
@@ -110,7 +110,7 @@ class ArticleAgentOrchestrator:
             "started",
             "检查正文内容，确定配图位置、主题和合适的图片来源。",
         )
-        await self.image_analyzer_agent.run(service, state)
+        await self.image_analyzer_agent.run(service, state, stream_context.emit)
         stream_context.emit_progress(
             "agent4_analyze_image_requirements",
             "配图分析",

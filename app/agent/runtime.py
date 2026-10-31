@@ -17,6 +17,14 @@ class AgentContext:
 
 
 @dataclass
+class AgentToolResult:
+    """Tool output for the model plus optional UI-only event data."""
+
+    content: Any
+    event_data: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class AgentTool:
     """A function tool exposed to an agent."""
 
@@ -81,6 +89,7 @@ class AgentRunner:
         prompt: str,
         context: Optional[AgentContext] = None,
         stream_handler: Optional[Callable[[str], None]] = None,
+        reasoning_stream_handler: Optional[Callable[[str], None]] = None,
         tool_event_handler: Optional[ToolEventHandler] = None,
     ) -> AgentRunResult:
         context = context or AgentContext()
@@ -92,13 +101,21 @@ class AgentRunner:
         tool_call_count = 0
         handoffs: list[str] = []
 
-        def emit_tool_event(name: str, status: str, arguments: Optional[dict[str, Any]] = None):
+        def emit_tool_event(
+            name: str,
+            status: str,
+            arguments: Optional[dict[str, Any]] = None,
+            event_data: Optional[dict[str, Any]] = None,
+        ):
             if tool_event_handler:
-                tool_event_handler({
+                event = {
                     "name": name,
                     "status": status,
                     "arguments": arguments or {},
-                })
+                }
+                if event_data:
+                    event.update(event_data)
+                tool_event_handler(event)
 
         for _ in range(self.max_turns):
             tools, handlers, handoff_targets = self._build_tools(current_agent)
@@ -110,21 +127,30 @@ class AgentRunner:
             if tools:
                 request["tools"] = tools
 
-            if stream_handler:
+            if stream_handler or reasoning_stream_handler:
                 request["stream"] = True
-                content, calls = await self._stream_turn(request, stream_handler)
+                content, reasoning_content, calls = await self._stream_turn(
+                    request,
+                    stream_handler,
+                    reasoning_stream_handler,
+                )
                 assistant_message: dict[str, Any] = {
                     "role": "assistant",
                     "content": content or None,
                 }
+                if reasoning_content:
+                    assistant_message["reasoning_content"] = reasoning_content
                 if calls:
                     assistant_message["tool_calls"] = calls
             else:
                 response = await self.client.chat.completions.create(**request)
                 message = response.choices[0].message
                 content = message.content or ""
+                reasoning_content = getattr(message, "reasoning_content", None) or ""
                 calls = [call.model_dump() for call in (message.tool_calls or [])]
                 assistant_message = {"role": "assistant", "content": message.content}
+                if reasoning_content:
+                    assistant_message["reasoning_content"] = reasoning_content
                 if calls:
                     assistant_message["tool_calls"] = calls
 
@@ -157,13 +183,20 @@ class AgentRunner:
                     arguments = json.loads(function.get("arguments") or "{}")
                     emit_tool_event(name, "running", arguments)
                     try:
-                        result = await handlers[name](arguments, context)
-                        if not isinstance(result, str):
-                            result = json.dumps(result, ensure_ascii=False, default=str)
-                    except Exception:
+                        tool_result = await handlers[name](arguments, context)
+                    except Exception as error:
+                        result = f"工具调用失败：{type(error).__name__}: {error}"
                         emit_tool_event(name, "failed", arguments)
-                        raise
-                    emit_tool_event(name, "completed", arguments)
+                    else:
+                        event_data = {}
+                        if isinstance(tool_result, AgentToolResult):
+                            result = tool_result.content or ""
+                            event_data = tool_result.event_data
+                        else:
+                            result = tool_result
+                            if not isinstance(result, str):
+                                result = json.dumps(result, ensure_ascii=False, default=str)
+                        emit_tool_event(name, "completed", arguments, event_data)
 
                 messages.append({
                     "role": "tool",
@@ -192,17 +225,29 @@ class AgentRunner:
 
         return tools, handlers, handoff_targets
 
-    async def _stream_turn(self, request: dict[str, Any], stream_handler: Callable[[str], None]):
+    async def _stream_turn(
+        self,
+        request: dict[str, Any],
+        stream_handler: Optional[Callable[[str], None]],
+        reasoning_stream_handler: Optional[Callable[[str], None]] = None,
+    ):
         stream = await self.client.chat.completions.create(**request)
         content_parts: list[str] = []
+        reasoning_parts: list[str] = []
         calls: dict[int, dict[str, Any]] = {}
 
         async for chunk in stream:
             choice = chunk.choices[0]
             delta = choice.delta
+            reasoning_delta = getattr(delta, "reasoning_content", None)
+            if reasoning_delta:
+                reasoning_parts.append(reasoning_delta)
+                if reasoning_stream_handler:
+                    reasoning_stream_handler(reasoning_delta)
             if delta.content:
                 content_parts.append(delta.content)
-                stream_handler(delta.content)
+                if stream_handler:
+                    stream_handler(delta.content)
             for call_delta in delta.tool_calls or []:
                 call = calls.setdefault(call_delta.index, {
                     "id": "",
@@ -216,4 +261,8 @@ class AgentRunner:
                 if call_delta.function and call_delta.function.arguments:
                     call["function"]["arguments"] += call_delta.function.arguments
 
-        return "".join(content_parts), [calls[index] for index in sorted(calls)]
+        return (
+            "".join(content_parts),
+            "".join(reasoning_parts),
+            [calls[index] for index in sorted(calls)],
+        )

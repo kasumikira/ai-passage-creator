@@ -109,9 +109,10 @@ class PromptConstant:
    - 注意：position=1 的封面图不需要占位符，不要放在正文中
    - 配图占位符可以放在任意合适位置（章节标题后、段落之间、列表项中等）
 4. imageSource 必须严格等于上方可用方式中的一个值，不得返回未列出的来源
-5. 根据可用方式的使用指南填写 keywords、prompt 和占位符，不要使用未提供的方式说明
-6. placeholderId 必须与正文中插入的占位符完全一致
-7. position=1 为封面图
+5. 根据可用方式的使用指南填写 keywords、prompt、memeId 和占位符，不要使用未提供的方式说明
+6. 当 imageSource=MEME 时，必须先调用 search_memes；只能使用工具返回的 memeId，且只填写 memeId，不填写 keywords 和 prompt
+7. placeholderId 必须与正文中插入的占位符完全一致
+8. position=1 为封面图
 
 请直接返回 JSON 格式,不要有其他内容:
 {{
@@ -134,6 +135,14 @@ class PromptConstant:
       "keywords": "",
       "prompt": "按所选方式的使用指南填写",
       "placeholderId": "{{IMAGE_PLACEHOLDER_1}}"
+    }},
+    {{
+      "position": 3,
+      "type": "section",
+      "sectionTitle": "章节标题2",
+      "imageSource": "MEME",
+      "memeId": "meme_001",
+      "placeholderId": "{{IMAGE_PLACEHOLDER_2}}"
     }}
   ]
 }}

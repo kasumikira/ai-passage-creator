@@ -1,6 +1,5 @@
 """文章路由"""
 
-import asyncio
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from databases import Database
@@ -54,12 +53,13 @@ async def create_article(
     
     # 异步执行阶段1：生成标题方案
     sse_emitter_manager.prepare(task_id)
-    asyncio.create_task(
+    article_async_service.start_task(
         article_async_service.execute_phase1(
             task_id,
             request.topic,
             request.style,
-        )
+        ),
+        name=f"article:{task_id}:titles",
     )
     
     return BaseResponse.success(data=task_id, message="任务创建成功")
@@ -187,7 +187,10 @@ async def confirm_title(
         user_description=request.user_description,
         login_user=current_user,
     )
-    asyncio.create_task(article_async_service.execute_phase2(request.task_id))
+    article_async_service.start_task(
+        article_async_service.execute_phase2(request.task_id),
+        name=f"article:{request.task_id}:outline",
+    )
     return BaseResponse.success(data=None)
 
 
@@ -204,7 +207,10 @@ async def confirm_outline(
         outline=request.outline,
         login_user=current_user,
     )
-    asyncio.create_task(article_async_service.execute_phase3(request.task_id))
+    article_async_service.start_task(
+        article_async_service.execute_phase3(request.task_id),
+        name=f"article:{request.task_id}:content",
+    )
     return BaseResponse.success(data=None)
 
 

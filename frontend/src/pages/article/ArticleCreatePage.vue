@@ -39,16 +39,31 @@
 
       <!-- 中间：主内容区 -->
       <main class="main-content">
-        <!-- AI 推理摘要与工具调用在主内容区连续展示 -->
+        <!-- AI 推理与工具调用在主内容区按事件顺序连续展示 -->
         <section v-if="realtimeLogs.length > 0" class="central-process-panel">
           <div class="process-heading">
-            <h4 class="panel-title">
-              <ThunderboltOutlined />
-              AI 推理摘要与工具调用
-            </h4>
+            <div class="process-heading-main">
+              <span class="process-live-dot" aria-hidden="true"></span>
+              <h4 class="panel-title">
+                <ThunderboltOutlined />
+                AI 推理与工具调用
+              </h4>
+              <span class="process-live-label">实时</span>
+            </div>
             <button type="button" class="process-toggle" @click="processExpanded = !processExpanded">
               {{ processExpanded ? '收起过程' : '查看过程' }}
             </button>
+          </div>
+          <div v-if="activeToolCall" class="tool-call-banner">
+            <LoadingOutlined class="process-spinner" />
+            <div class="tool-call-copy">
+              <strong>AI 正在进行工具调用</strong>
+              <span>
+                {{ activeToolCall.label }}
+                <template v-if="activeToolCall.query"> · {{ activeToolCall.query }}</template>
+              </span>
+            </div>
+            <span class="tool-call-state">RUNNING</span>
           </div>
           <div
             v-if="activeAgentProgress"
@@ -62,12 +77,52 @@
           <Transition name="expand">
             <div v-show="processExpanded" ref="logsContainerRef" class="logs-container">
               <div
-                v-for="(log, index) in realtimeLogs"
-                :key="index"
+                v-for="log in realtimeLogs"
+                :key="log.id"
                 :class="['log-entry', log.level, log.kind]"
               >
-                <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
-                <span class="log-message">{{ log.message }}</span>
+                <template v-if="log.kind === 'reasoning'">
+                  <div class="reasoning-label">
+                    <span class="reasoning-mark" aria-hidden="true"></span>
+                    reasoning
+                  </div>
+                  <div class="log-message reasoning-message">{{ log.message }}</div>
+                </template>
+                <template v-else-if="log.kind === 'tool'">
+                  <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
+                  <span class="log-tool-icon">
+                    <LoadingOutlined v-if="log.status === 'running'" class="process-spinner" />
+                    <CheckCircleOutlined v-else-if="log.status === 'completed'" />
+                    <CloseCircleOutlined v-else />
+                  </span>
+                  <div class="log-tool-copy">
+                    <strong>
+                      {{ log.status === 'running' ? 'AI 正在调用工具' : log.status === 'completed' ? '工具调用完成' : '工具调用失败' }}
+                    </strong>
+                    <span class="log-message">{{ log.message }}</span>
+                  </div>
+                </template>
+                <template v-else-if="log.kind === 'meme-result'">
+                  <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
+                  <div class="meme-result-copy">
+                    <strong>返回表情包候选图</strong>
+                    <span class="log-message">{{ log.message }}</span>
+                    <div class="meme-candidate-grid">
+                      <div
+                        v-for="item in log.memeItems"
+                        :key="item.memeId"
+                        class="meme-candidate"
+                      >
+                        <span class="meme-candidate-id">{{ item.memeId }}</span>
+                        <img :src="item.imageUrl" :alt="item.memeId" loading="lazy" />
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <template v-else>
+                  <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
+                  <span class="log-message">{{ log.message }}</span>
+                </template>
               </div>
             </div>
           </Transition>
@@ -147,7 +202,7 @@
                   <a-checkbox value="NANO_BANANA">Nano Banana</a-checkbox>
                   <a-checkbox value="MERMAID">Mermaid</a-checkbox>
                   <a-checkbox value="ICONIFY">Iconify</a-checkbox>
-                  <a-checkbox value="EMOJI_PACK">表情包</a-checkbox>
+                  <a-checkbox value="MEME">表情包</a-checkbox>
                   <a-checkbox value="SVG_DIAGRAM">SVG</a-checkbox>
                 </a-checkbox-group>
               </div>
@@ -246,8 +301,16 @@
             </div>
           </div>
 
-          <!-- 正文在整个推理与配图流程结束后展示 -->
-          <div v-if="currentStep === 2" class="outline-loading content-generating-placeholder">
+          <!-- 正文在生成过程中实时展示，不再只显示摘要 -->
+          <div v-if="article.content" class="content-preview live-content-preview">
+            <div class="live-content-heading">
+              <FileTextOutlined />
+              <span>正文实时生成</span>
+              <span v-if="currentStep === 2" class="typing-cursor">|</span>
+            </div>
+            <div v-html="markdownToHtml(article.content)" class="markdown-body"></div>
+          </div>
+          <div v-else-if="currentStep === 2" class="outline-loading content-generating-placeholder">
             <a-spin />
             <span>{{ activeAgentProgress?.summary || '正在撰写正文...' }}</span>
           </div>
@@ -517,7 +580,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeUnmount, onMounted, nextTick, computed } from 'vue'
+import { ref, onBeforeUnmount, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useLoginUserStore } from '@/stores/loginUser'
@@ -593,7 +656,6 @@ const selectedPlatformId = ref<number>()
 const selectedProductId = ref<number>()
 const selectedPlatform = computed(() => platforms.value.find((platform) => platform.id === selectedPlatformId.value))
 const isCreating = ref(false)
-const isCompleted = ref(false)
 const isOutlineStreaming = ref(false)
 const currentStep = ref(0)
 const taskId = ref('')
@@ -602,6 +664,7 @@ const errorMessage = ref('')
 const confirmLoading = ref(false)
 const processExpanded = ref(false)
 const logsContainerRef = ref<HTMLElement | null>(null)
+const activeToolCall = ref<{ name: string, label: string, query: string } | null>(null)
 const activeAgentProgress = ref<{
   agent: string
   title: string
@@ -611,15 +674,20 @@ const activeAgentProgress = ref<{
 
 // 实时日志
 interface RealtimeLog {
+  id: number
   timestamp: number
   level: string
   message: string
-  kind?: 'progress' | 'tool' | 'activity'
+  kind?: 'progress' | 'reasoning' | 'tool' | 'activity' | 'meme-result'
+  status?: 'running' | 'completed' | 'failed'
+  memeItems?: Array<{ memeId: string, imageUrl: string }>
 }
 const realtimeLogs = ref<RealtimeLog[]>([])
+let logSequence = 0
 const toolLabels: Record<string, string> = {
   search_internet: '搜索互联网',
   search_images: '搜索图片',
+  search_memes: '搜索表情包',
   search_database: '搜索资料库',
   get_marketing_performance: '读取营销效果数据',
 }
@@ -684,8 +752,10 @@ const parsedOutline = computed<OutlineItem[]>(() => {
 
 // 配图进度
 const imageCount = ref(0)
-const totalImages = ref(5)
-const imageProgress = ref(0)
+const totalImages = ref(0)
+const imageProgress = computed(() => totalImages.value > 0
+  ? Math.round((imageCount.value / totalImages.value) * 100)
+  : 0)
 
 // 文章数据
 const article = ref<Partial<API.ArticleVO>>({
@@ -711,7 +781,10 @@ const startCreate = async () => {
 
   isCreating.value = true
   currentStep.value = 0
+  clearReasoningBuffer()
   realtimeLogs.value = []
+  logSequence = 0
+  activeToolCall.value = null
   activeAgentProgress.value = null
   processExpanded.value = true
   addLog('开始创建文章任务...', 'info')
@@ -750,17 +823,66 @@ const startCreate = async () => {
 }
 
 // 添加日志
-const addLog = (message: string, level: string = 'info', kind: RealtimeLog['kind'] = 'activity') => {
+const addLog = (
+  message: string,
+  level: string = 'info',
+  kind: RealtimeLog['kind'] = 'activity',
+  status?: RealtimeLog['status'],
+) => {
   realtimeLogs.value.push({
+    id: ++logSequence,
     timestamp: Date.now(),
     level,
     message,
     kind,
-  })
-  nextTick(() => {
-    logsContainerRef.value?.scrollTo({ top: logsContainerRef.value.scrollHeight })
+    status,
   })
 }
+
+// 高频 token 先缓冲，避免每次接收都触发 Vue 渲染和日志布局。
+const REASONING_REFRESH_INTERVAL_MS = 100
+let pendingReasoning = ''
+let reasoningTimer: ReturnType<typeof setTimeout> | undefined
+
+const clearReasoningBuffer = () => {
+  clearTimeout(reasoningTimer)
+  reasoningTimer = undefined
+  pendingReasoning = ''
+}
+
+const flushReasoning = () => {
+  clearTimeout(reasoningTimer)
+  reasoningTimer = undefined
+  if (!pendingReasoning) return
+
+  const content = pendingReasoning
+  pendingReasoning = ''
+  const lastLog = realtimeLogs.value[realtimeLogs.value.length - 1]
+  if (lastLog?.kind === 'reasoning') {
+    lastLog.message += content
+  } else {
+    addLog(content, 'info', 'reasoning')
+  }
+  processExpanded.value = true
+}
+
+const appendReasoning = (content: string) => {
+  if (!content) return
+  pendingReasoning += content
+  if (reasoningTimer === undefined) {
+    reasoningTimer = setTimeout(flushReasoning, REASONING_REFRESH_INTERVAL_MS)
+  }
+}
+
+// DOM 更新后统一滚动，覆盖新增日志、推理追加和展开面板。
+watch(
+  () => [realtimeLogs.value.length, realtimeLogs.value[realtimeLogs.value.length - 1]?.message, processExpanded.value],
+  () => {
+    const container = logsContainerRef.value
+    container?.scrollTo({ top: container.scrollHeight })
+  },
+  { flush: 'post' },
+)
 
 // 格式化日志时间
 const formatLogTime = (timestamp: number) => {
@@ -770,11 +892,15 @@ const formatLogTime = (timestamp: number) => {
 
 // 处理 SSE 消息
 const handleSSEMessage = (msg: SSEMessage) => {
-  console.log('SSE消息:', msg)
-
+  // 先写入前面的推理，保持步骤、工具事件与推理的先后顺序。
+  if (msg.type !== 'AGENT_REASONING_STREAMING') flushReasoning()
   switch (msg.type) {
     case 'AGENT_PROGRESS': {
-      const status = msg.status === 'completed' ? 'completed' : 'started'
+      const status: 'started' | 'completed' | 'failed' = msg.status === 'completed'
+        ? 'completed'
+        : msg.status === 'failed'
+          ? 'failed'
+          : 'started'
       const progress = {
         agent: msg.agent || '',
         title: msg.title || 'AI 处理',
@@ -782,8 +908,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
         summary: msg.summary || '',
       }
       activeAgentProgress.value = progress
-      processExpanded.value = status === 'started'
-        || !['agent1_generate_titles', 'agent2_generate_outline'].includes(progress.agent)
+      processExpanded.value = true
       if (status === 'started') {
         currentStep.value = agentStepIndexes[msg.agent] ?? currentStep.value
         currentPhase.value = msg.agent === 'agent1_generate_titles'
@@ -800,6 +925,10 @@ const handleSSEMessage = (msg: SSEMessage) => {
       )
       break
     }
+
+    case 'AGENT_REASONING_STREAMING':
+      appendReasoning(msg.content || '')
+      break
 
     case 'AGENT1_COMPLETE':
       // 智能体1完成，进入标题生成阶段（显示加载）
@@ -858,11 +987,27 @@ const handleSSEMessage = (msg: SSEMessage) => {
       const queryText = query ? `：${query.length > 120 ? `${query.slice(0, 120)}…` : query}` : ''
       if (msg.status === 'running') {
         processExpanded.value = true
-        addLog(`正在调用${toolName}${queryText}`, 'info', 'tool')
+        activeToolCall.value = { name: msg.name || '', label: toolName, query: queryText.slice(1) }
+        addLog(`正在调用${toolName}${queryText}`, 'info', 'tool', 'running')
       } else if (msg.status === 'completed') {
-        addLog(`${toolName}调用完成`, 'success', 'tool')
+        activeToolCall.value = null
+        addLog(`${toolName}调用完成`, 'success', 'tool', 'completed')
+        if (msg.result?.type === 'MEME_SEARCH_RESULT') {
+          const items = Array.isArray(msg.result.items)
+            ? msg.result.items.filter(
+              (item: any) => typeof item?.memeId === 'string' && typeof item?.imageUrl === 'string',
+            )
+            : []
+          addLog(
+            `已返回 ${items.length} 张候选图，后续将使用 memeId 回填配图需求`,
+            'info',
+            'meme-result',
+          )
+          realtimeLogs.value[realtimeLogs.value.length - 1].memeItems = items
+        }
       } else {
-        addLog(`${toolName}调用失败`, 'error', 'tool')
+        activeToolCall.value = null
+        addLog(`${toolName}调用失败`, 'error', 'tool', 'failed')
       }
       break
     }
@@ -870,14 +1015,13 @@ const handleSSEMessage = (msg: SSEMessage) => {
     case 'AGENT4_COMPLETE':
       // 配图分析完成，进入配图生成步骤
       currentStep.value = 4
-      totalImages.value = msg.imageRequirements?.length || 5
+      totalImages.value = msg.imageRequirements?.length ?? 0
       addLog(`配图需求分析完成，共 ${totalImages.value} 张`, 'success')
       break
 
     case 'IMAGE_COMPLETE':
       // 单张配图完成
       imageCount.value++
-      imageProgress.value = Math.round((imageCount.value / totalImages.value) * 100)
       addLog(`配图生成中 ${imageCount.value}/${totalImages.value}`, 'info')
       break
 
@@ -898,9 +1042,9 @@ const handleSSEMessage = (msg: SSEMessage) => {
       // 全部完成
       currentPhase.value = 'COMPLETED'
       currentStep.value = 6
-      isCompleted.value = true
       isCreating.value = false
-      processExpanded.value = false
+      activeToolCall.value = null
+      processExpanded.value = true
       message.success('文章创作完成!')
       addLog('✨ 文章创作完成！', 'success')
       break
@@ -914,7 +1058,8 @@ const handleSSEMessage = (msg: SSEMessage) => {
         activeAgentProgress.value.status = 'failed'
         activeAgentProgress.value.summary = errorMessage.value
       }
-      processExpanded.value = false
+      activeToolCall.value = null
+      processExpanded.value = true
       addLog(`创作失败: ${msg.message || '未知错误'}`, 'error')
       break
   }
@@ -965,6 +1110,7 @@ const handleConfirmOutline = async (outlineData: Array<{section: number, title: 
 
 // 处理 SSE 错误
 const handleSSEError = (error: Event) => {
+  flushReasoning()
   console.error('SSE错误:', error)
   message.error('连接失败,请重试')
   isCreating.value = false
@@ -999,16 +1145,17 @@ const resetCreate = () => {
   titleOptions.value = []
   outline.value = []
   isCreating.value = false
-  isCompleted.value = false
   isOutlineStreaming.value = false
   processExpanded.value = false
+  activeToolCall.value = null
   activeAgentProgress.value = null
   currentStep.value = 0
   imageCount.value = 0
-  imageProgress.value = 0
   outlineRaw.value = ''
   confirmLoading.value = false
+  clearReasoningBuffer()
   realtimeLogs.value = []
+  logSequence = 0
   article.value = {
     mainTitle: '',
     subTitle: '',
@@ -1040,6 +1187,7 @@ onMounted(async () => {
 
 // 组件卸载前关闭 SSE
 onBeforeUnmount(() => {
+  clearReasoningBuffer()
   closeSSE(eventSource)
 })
 </script>
@@ -1199,9 +1347,9 @@ onBeforeUnmount(() => {
 
 /* 主内容区 */
 .main-content {
-  padding: 32px 40px;
+  padding: 28px clamp(24px, 4vw, 64px) 48px;
   overflow-y: auto;
-  background: white;
+  background: #f7faf8;
 }
 
 /* 输入状态 */
@@ -1493,6 +1641,25 @@ onBeforeUnmount(() => {
   line-height: 1.8;
 }
 
+.live-content-preview {
+  margin-top: 24px;
+  padding: 24px clamp(20px, 3vw, 40px);
+  background: white;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.live-content-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: var(--color-primary-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .markdown-body {
   line-height: 1.8;
   font-size: 15px;
@@ -1758,11 +1925,11 @@ onBeforeUnmount(() => {
   width: 100%;
   max-width: 1040px;
   margin: 0 auto 24px;
-  padding: 18px 22px;
-  background: white;
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  background: #10201b;
+  border: 1px solid rgba(99, 197, 145, 0.2);
+  border-radius: 18px;
+  box-shadow: 0 18px 42px rgba(15, 56, 38, 0.14);
 
   .process-heading {
     display: flex;
@@ -1770,30 +1937,116 @@ onBeforeUnmount(() => {
     justify-content: space-between;
     gap: 8px;
 
+    .process-heading-main {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .process-live-dot {
+      width: 8px;
+      height: 8px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: #72e2a5;
+      box-shadow: 0 0 0 5px rgba(114, 226, 165, 0.12);
+      animation: pulse 1.5s infinite;
+    }
+
     .panel-title {
       margin: 0;
+      color: #effbf4;
+
+      .anticon {
+        color: #72e2a5;
+      }
+    }
+
+    .process-live-label {
+      padding: 3px 7px;
+      border: 1px solid rgba(114, 226, 165, 0.3);
+      border-radius: var(--radius-full);
+      color: #8fe5b6;
+      font-size: 10px;
+      letter-spacing: 0.08em;
     }
   }
 
   .process-toggle {
-    border: 0;
-    padding: 4px 0 4px 8px;
+    flex-shrink: 0;
+    border: 1px solid rgba(175, 231, 199, 0.25);
+    padding: 6px 10px;
     background: transparent;
-    color: var(--color-primary-dark);
-    font-size: 11px;
+    border-radius: 8px;
+    color: #bcebd0;
+    font-size: 12px;
     cursor: pointer;
     white-space: nowrap;
+    transition: all var(--transition-fast);
+
+    &:hover {
+      border-color: rgba(175, 231, 199, 0.5);
+      background: rgba(114, 226, 165, 0.1);
+      color: white;
+    }
+  }
+
+  .tool-call-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 12px 14px;
+    border: 1px solid rgba(114, 226, 165, 0.28);
+    border-radius: 12px;
+    background: rgba(114, 226, 165, 0.1);
+    color: #dff8e9;
+
+    > .anticon {
+      flex-shrink: 0;
+      color: #72e2a5;
+      font-size: 16px;
+    }
+
+    .tool-call-copy {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+
+      strong {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      span {
+        overflow: hidden;
+        color: #a9d9bc;
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    .tool-call-state {
+      color: #8fe5b6;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
   }
 
   .process-summary {
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: var(--radius-md);
-    background: rgba(34, 197, 94, 0.08);
-    color: var(--color-primary-dark);
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(175, 231, 199, 0.12);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #b8d8c4;
     font-size: 13px;
     line-height: 1.5;
 
@@ -1803,13 +2056,13 @@ onBeforeUnmount(() => {
     }
 
     &.completed {
-      background: var(--color-background-secondary);
-      color: var(--color-text-secondary);
+      color: #b8d8c4;
     }
 
     &.failed {
-      background: rgba(239, 68, 68, 0.05);
-      color: var(--color-error);
+      border-color: rgba(252, 165, 165, 0.2);
+      background: rgba(239, 68, 68, 0.12);
+      color: #fecaca;
     }
   }
 
@@ -1836,62 +2089,173 @@ onBeforeUnmount(() => {
   }
 
   .logs-container {
-    max-height: 380px;
+    max-height: 460px;
+    margin-top: 14px;
     overflow-y: auto;
-    background: var(--color-background);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border-light);
-    padding: 8px;
+    background: rgba(2, 12, 9, 0.34);
+    border: 1px solid rgba(175, 231, 199, 0.12);
+    border-radius: 12px;
+    padding: 10px;
 
     .log-entry {
       display: flex;
+      position: relative;
       gap: 8px;
-      padding: 6px 8px;
+      align-items: flex-start;
+      padding: 8px 10px;
       font-size: 12px;
-      line-height: 1.4;
-      border-radius: var(--radius-sm);
-      margin-bottom: 4px;
-      transition: background var(--transition-fast);
+      line-height: 1.55;
+      border-radius: 9px;
+      margin-bottom: 5px;
+      transition: background var(--transition-fast), border-color var(--transition-fast);
 
       &:hover {
-        background: var(--color-background-secondary);
+        background: rgba(255, 255, 255, 0.05);
       }
 
       &.success {
         .log-time {
-          color: var(--color-success);
+          color: #72e2a5;
         }
       }
 
       &.error {
-        background: rgba(239, 68, 68, 0.05);
+        background: rgba(239, 68, 68, 0.1);
+
         .log-time {
-          color: var(--color-error);
+          color: #fca5a5;
         }
+
         .log-message {
-          color: var(--color-error);
+          color: #fecaca;
         }
       }
 
       &.tool {
-        background: rgba(34, 197, 94, 0.04);
+        border: 1px solid rgba(114, 226, 165, 0.18);
+        background: rgba(114, 226, 165, 0.08);
+      }
 
-        .log-message::before {
-          content: '工具 · ';
-          color: var(--color-primary-dark);
-          font-weight: 600;
+      &.reasoning {
+        display: block;
+        padding: 10px 12px 12px 14px;
+        border-left: 2px solid #72e2a5;
+        background: rgba(255, 255, 255, 0.035);
+
+        .log-message {
+          color: #d8ede0;
         }
       }
 
       .log-time {
         flex-shrink: 0;
-        color: var(--color-text-muted);
+        padding-top: 1px;
+        color: #78998a;
+        font-size: 10px;
         font-weight: 500;
       }
 
       .log-message {
         flex: 1;
-        color: var(--color-text-secondary);
+        color: #b6d0c0;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .reasoning-label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 5px;
+        color: #82dba9;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .reasoning-mark {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #72e2a5;
+        box-shadow: 0 0 0 3px rgba(114, 226, 165, 0.12);
+      }
+
+      .log-tool-icon {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        color: #72e2a5;
+      }
+
+      .log-tool-copy {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+
+        strong {
+          color: #dff8e9;
+          font-size: 12px;
+          font-weight: 600;
+        }
+      }
+
+      &.meme-result {
+        align-items: flex-start;
+        border: 1px solid rgba(114, 226, 165, 0.14);
+        background: rgba(114, 226, 165, 0.045);
+      }
+
+      .meme-result-copy {
+        display: grid;
+        flex: 1;
+        gap: 8px;
+        min-width: 0;
+
+        strong {
+          color: #dff8e9;
+          font-size: 12px;
+          font-weight: 600;
+        }
+      }
+
+      .meme-candidate-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .meme-candidate {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid rgba(175, 231, 199, 0.18);
+        border-radius: 8px;
+        background: rgba(2, 12, 9, 0.45);
+
+        img {
+          display: block;
+          width: 100%;
+          aspect-ratio: 1;
+          object-fit: cover;
+        }
+      }
+
+      .meme-candidate-id {
+        position: absolute;
+        z-index: 1;
+        top: 5px;
+        left: 5px;
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: rgba(2, 12, 9, 0.78);
+        color: #dff8e9;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 10px;
       }
     }
 
@@ -1900,7 +2264,7 @@ onBeforeUnmount(() => {
     }
 
     &::-webkit-scrollbar-thumb {
-      background: var(--color-border);
+      background: rgba(175, 231, 199, 0.28);
       border-radius: var(--radius-full);
     }
 

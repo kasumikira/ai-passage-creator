@@ -4,7 +4,8 @@ from typing import Any
 
 from databases import Database
 
-from app.agent.runtime import AgentContext, AgentTool
+from app.agent.runtime import AgentContext, AgentTool, AgentToolResult
+from app.config import settings
 
 
 def build_marketing_tools(
@@ -103,7 +104,7 @@ def build_marketing_tools(
     tools = [
         AgentTool(
             name="search_internet",
-            description="搜索公开互联网，获取最新市场、行业和竞品信息。",
+            description="使用 Exa 搜索公开网页，返回来源链接、发布时间和相关内容摘录，用于核验营销事实。",
             parameters=query_schema,
             handler=search_internet,
         ),
@@ -134,3 +135,73 @@ def build_marketing_tools(
         )
 
     return tools
+
+
+def build_meme_tools() -> list[AgentTool]:
+    """Build the dedicated Meme search tool used by the image analyst."""
+
+    async def search_memes(arguments: dict[str, Any], context: AgentContext):
+        from app.services.meme_service import MemeService
+
+        query = arguments["query"].strip()
+        service = MemeService()
+        try:
+            candidates = await service.search_images(
+                query,
+                limit=settings.meme_default_limit,
+            )
+        finally:
+            await service.close()
+
+        meme_candidates = context.values.setdefault("meme_candidates", {})
+        context.values.setdefault("next_meme_index", 1)
+        model_content: list[dict[str, Any]] = []
+        ui_items: list[dict[str, str]] = []
+
+        for candidate in candidates:
+            meme_id = f"meme_{context.values['next_meme_index']:03d}"
+            context.values["next_meme_index"] += 1
+            preview_url = candidate["previewUrl"]
+            meme_candidates[meme_id] = {
+                "memeId": meme_id,
+                "imageUrl": candidate["imageUrl"],
+                "imageDataUrl": candidate["imageDataUrl"],
+            }
+            model_content.extend([
+                {"type": "text", "text": f"memeId: {meme_id}"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": preview_url, "detail": "low"},
+                },
+            ])
+            ui_items.append({"memeId": meme_id, "imageUrl": preview_url})
+
+        return AgentToolResult(
+            content=model_content,
+            event_data={
+                "result": {
+                    "type": "MEME_SEARCH_RESULT",
+                    "items": ui_items,
+                },
+            },
+        )
+
+    query_schema = {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "描述文章语境、情绪或反应的简短搜索词",
+            },
+        },
+        "required": ["query"],
+        "additionalProperties": False,
+    }
+    return [
+        AgentTool(
+            name="search_memes",
+            description="搜索一批与文章语境匹配的表情包图片；每次默认返回 3 张，并为每张图片分配 memeId。",
+            parameters=query_schema,
+            handler=search_memes,
+        ),
+    ]
