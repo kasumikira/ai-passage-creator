@@ -165,6 +165,7 @@ import {
   RedoOutlined
 } from '@ant-design/icons-vue'
 import { listArticle, deleteArticle as deleteArticleApi, getArticle } from '@/api/articleController'
+import { exportAsMarkdown } from '@/utils/article'
 import dayjs, { type Dayjs } from 'dayjs'
 
 const router = useRouter()
@@ -305,22 +306,14 @@ const exportArticle = async (record: API.ArticleVO) => {
       return
     }
 
-    let markdown = `# ${article.mainTitle}\n\n`
-    markdown += `> ${article.subTitle}\n\n`
-
-    if (article.fullContent) {
-      markdown += article.fullContent
-    } else {
-      markdown += article.content || ''
-    }
-
-    const blob = new Blob([markdown], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${article.mainTitle || '文章'}.md`
-    a.click()
-    URL.revokeObjectURL(url)
+    await exportAsMarkdown({
+      title: article.mainTitle || '文章',
+      subTitle: article.subTitle,
+      content: article.content,
+      fullContent: article.fullContent,
+      outline: article.outline,
+      images: article.images,
+    })
 
     message.success('导出成功')
   } catch (error) {

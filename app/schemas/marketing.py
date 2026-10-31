@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ProductFAQ(BaseModel):
@@ -25,6 +25,13 @@ class ProductProfileData(BaseModel):
     claims_to_avoid: list[str] = Field(default_factory=list, alias="claimsToAvoid")
     faq: list[ProductFAQ] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
+
+    @field_validator("target_audience", mode="before")
+    @classmethod
+    def join_target_audience_list(cls, value):
+        if isinstance(value, list) and all(isinstance(item, str) for item in value):
+            return "；".join(value)
+        return value
 
 
 class ProductProfileVO(BaseModel):

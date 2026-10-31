@@ -26,8 +26,8 @@ class Article(Base):
     title_options = Column("titleOptions", Text, nullable=True, comment="标题方案列表（JSON格式）")
     outline = Column(Text, nullable=True, comment="大纲（JSON格式）")
     content = Column(Text, nullable=True, comment="正文（Markdown格式）")
-    full_content = Column("fullContent", Text, nullable=True, comment="完整图文（Markdown格式，含图片）")
-    cover_image = Column("coverImage", String(512), nullable=True, comment="封面图 URL")
+    full_content = Column("fullContent", Text, nullable=True, comment="完整图文（Markdown格式，含图片引用）")
+    cover_image = Column("coverImage", String(512), nullable=True, comment="封面图 SHA-256 图片引用")
     images = Column(Text, nullable=True, comment="配图列表（JSON数组，包含封面图 position=1）")
     status = Column(String(20), nullable=False, default="PENDING", comment="状态：PENDING/PROCESSING/COMPLETED/FAILED")
     phase = Column(

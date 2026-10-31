@@ -2,6 +2,7 @@
  * 文章相关工具函数
  */
 import { STATUS_TEXT_MAP, STATUS_TAG_COLOR_MAP, STATUS_COLOR_MAP } from '@/constants/article'
+import request from '@/request'
 
 /**
  * 获取状态文本
@@ -41,11 +42,38 @@ export interface ExportArticleOptions {
   subTitle?: string
   content?: string
   fullContent?: string
-  outline?: Array<{ section: number; title: string }>
-  images?: Array<{ description: string; url: string }>
+  outline?: Array<{ section?: number; title?: string }>
+  images?: Array<{ description?: string; url?: string }>
 }
 
-export const exportAsMarkdown = (options: ExportArticleOptions): void => {
+const readBlobAsDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload = () => resolve(reader.result as string)
+  reader.onerror = () => reject(reader.error || new Error('读取图片失败'))
+  reader.readAsDataURL(blob)
+})
+
+const embedDatabaseImages = async (markdown: string): Promise<string> => {
+  const hashes = [...new Set(
+    [...markdown.matchAll(/dbimage:\/\/([a-f0-9]{64})/gi)].map((match) => match[1].toLowerCase()),
+  )]
+  const embeddedImages = await Promise.all(hashes.map(async (hash) => {
+    const response = await request.get<Blob>(`/article/images/${hash}`, {
+      responseType: 'blob',
+    })
+    if (!response.data.type.startsWith('image/')) {
+      throw new Error('获取文章图片失败')
+    }
+    return [hash, await readBlobAsDataUrl(response.data)] as const
+  }))
+
+  for (const [hash, dataUrl] of embeddedImages) {
+    markdown = markdown.replace(new RegExp(`dbimage://${hash}`, 'gi'), dataUrl)
+  }
+  return markdown
+}
+
+export const exportAsMarkdown = async (options: ExportArticleOptions): Promise<void> => {
   const { title, subTitle, content, fullContent, outline, images } = options
 
   let markdown = `# ${title}\n\n`
@@ -70,11 +98,12 @@ export const exportAsMarkdown = (options: ExportArticleOptions): void => {
     if (images && images.length > 0) {
       markdown += `\n\n## 配图\n\n`
       images.forEach((image) => {
-        markdown += `![${image.description}](${image.url})\n\n`
+        if (image.url) markdown += `![${image.description || ''}](${image.url})\n\n`
       })
     }
   }
 
+  markdown = await embedDatabaseImages(markdown)
   const blob = new Blob([markdown], { type: 'text/markdown' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

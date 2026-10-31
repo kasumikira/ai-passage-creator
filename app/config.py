@@ -1,6 +1,7 @@
 """配置管理"""
 
 from pathlib import Path
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 获取项目根目录
@@ -39,17 +40,11 @@ class Settings(BaseSettings):
     llm_api_key: str = "dummy"
     llm_base_url: str = "https://api.deepseek.com"
     llm_model: str = "deepseek-flash"
+    llm_reasoning_effort: Optional[str] = None
 
     # Pexels 图片搜索
     pexels_api_key: str = "dummy"
     pexels_api_url: str = "https://api.pexels.com/v1/search"
-
-    # 腾讯云 COS
-    tencent_cos_secret_id: str = "dummy"
-    tencent_cos_secret_key: str = "dummy"
-    tencent_cos_region: str = "dummy"
-    tencent_cos_bucket: str = "dummy"
-    tencent_cos_domain: str = "dummy"
 
     # AI 生图配置（格式：google-genai=Google GenAI 协议 / openai=OpenAI images 兼容协议）
     image_gen_format: str = "google-genai"
@@ -61,11 +56,9 @@ class Settings(BaseSettings):
     image_gen_output_mime_type: str = "image/png"
 
     # Mermaid 配置
-    mermaid_cli_command: str = "mmdc"
     mermaid_background_color: str = "transparent"
     mermaid_output_format: str = "svg"
     mermaid_width: int = 1200
-    mermaid_timeout: int = 30000
 
     # Iconify 配置
     iconify_api_url: str = "https://api.iconify.design"

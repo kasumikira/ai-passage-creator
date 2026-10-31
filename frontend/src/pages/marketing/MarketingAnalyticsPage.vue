@@ -43,6 +43,13 @@
               <template #icon><BulbOutlined /></template>
               {{ analysis ? '重新分析' : '分析本期表现' }}
             </a-button>
+            <div v-if="analysis && toolCallDetails.length" class="tool-call-list">
+              <span>本次调用的工具</span>
+              <div v-for="(toolCall, index) in toolCallDetails" :key="`${toolCall.name}-${index}`" class="tool-call-item">
+                <strong>{{ toolLabel(toolCall.name) }}</strong>
+                <span v-if="toolQuery(toolCall)">{{ toolQuery(toolCall) }}</span>
+              </div>
+            </div>
             <div v-if="analysis" class="analysis-result" v-html="markdownToHtml(analysis)"></div>
             <div v-else class="analysis-placeholder">
               <BulbOutlined />
@@ -99,13 +106,19 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons-vue'
 import * as echarts from 'echarts'
-import { analyzeMarketingAnalytics, getMarketingAnalytics, type MarketingAnalytics } from '@/api/marketingController'
+import {
+  analyzeMarketingAnalytics,
+  getMarketingAnalytics,
+  type MarketingAnalytics,
+  type MarketingToolCall,
+} from '@/api/marketingController'
 import { marked } from 'marked'
 
 const analytics = ref<MarketingAnalytics | null>(null)
 const loading = ref(false)
 const analyzing = ref(false)
 const analysis = ref('')
+const toolCallDetails = ref<MarketingToolCall[]>([])
 const trendChartRef = ref<HTMLElement>()
 let trendChart: echarts.ECharts | null = null
 
@@ -162,15 +175,31 @@ const renderTrendChart = () => {
 
 const runAnalysis = async () => {
   analyzing.value = true
+  toolCallDetails.value = []
   try {
     const result = readResult(await analyzeMarketingAnalytics())
     analysis.value = result.analysis
+    toolCallDetails.value = result.toolCallDetails || []
     if (result.toolCalls === 0) message.info('AI 已完成分析')
   } catch (error) {
     message.error((error as Error).message || 'AI 分析失败')
   } finally {
     analyzing.value = false
   }
+}
+
+const toolLabels: Record<string, string> = {
+  get_marketing_performance: '读取营销效果数据',
+  search_internet: '搜索互联网',
+  search_images: '搜索图片',
+  search_database: '搜索资料库',
+}
+
+const toolLabel = (name: string) => toolLabels[name] || name
+
+const toolQuery = (toolCall: MarketingToolCall) => {
+  const query = toolCall.arguments.query
+  return typeof query === 'string' ? query : ''
 }
 
 const markdownToHtml = (value: string) => marked(value)
@@ -211,6 +240,10 @@ onUnmounted(() => {
 .analysis-intro { margin: 17px 0; color: #7b8880; font-size: 12px; line-height: 1.7; }
 .analysis-surface :deep(.ant-btn) { background: #287a59; box-shadow: none; }
 .analysis-placeholder { display: flex; gap: 10px; align-items: center; margin-top: 18px; padding: 15px; border-radius: 12px; color: #849189; background: #f4f8f5; font-size: 12px; line-height: 1.5; }
+.tool-call-list { display: grid; gap: 8px; margin-top: 17px; padding: 13px; border-radius: 11px; background: #edf6f0; color: #557463; font-size: 11px; }
+.tool-call-item { display: flex; flex-wrap: wrap; gap: 5px 9px; align-items: baseline; }
+.tool-call-item strong { color: #287553; font-size: 12px; font-weight: 600; }
+.tool-call-item span { color: #7b8880; }
 .analysis-result { max-height: 290px; overflow: auto; margin-top: 17px; padding: 15px 16px; border-radius: 12px; color: #46594f; background: #f4f8f5; font-size: 12px; line-height: 1.75; }.analysis-result :deep(p) { margin: 0 0 9px; }.analysis-result :deep(p:last-child) { margin-bottom: 0; }.analysis-result :deep(h1), .analysis-result :deep(h2), .analysis-result :deep(h3) { margin: 10px 0 5px; color: #244b38; font-size: 13px; }
 .lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }.platform-list { display: grid; gap: 4px; margin-top: 17px; }.platform-row { display: grid; grid-template-columns: minmax(120px, 1.4fr) repeat(3, minmax(62px, .7fr)); align-items: center; gap: 10px; padding: 13px 4px; border-bottom: 1px solid #eff3f0; font-size: 12px; }.platform-row:last-child { border-bottom: 0; }.platform-name { display: flex; gap: 8px; align-items: center; }.platform-dot { width: 8px; height: 8px; border-radius: 50%; background: #61a780; }.platform-row > span:not(.platform-name) { display: grid; gap: 3px; color: #34483c; font-weight: 600; }.platform-row small, .content-conversions small { color: #9aa59e; font-size: 10px; font-weight: 400; }
 .top-content-surface { display: grid; align-content: start; }.content-row { display: flex; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid #eff3f0; }.content-row:last-child { border-bottom: 0; }.content-rank { color: #9ab4a5; font-size: 14px; font-weight: 700; }.content-copy { display: grid; flex: 1; min-width: 0; gap: 5px; }.content-copy strong { overflow: hidden; color: #33483c; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }.content-copy span { color: #99a49d; font-size: 10px; }.content-conversions { display: grid; gap: 3px; color: #328064; font-size: 13px; font-weight: 700; text-align: right; }

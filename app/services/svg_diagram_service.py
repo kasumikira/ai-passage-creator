@@ -82,7 +82,12 @@ class SvgDiagramService(ImageSearchService):
 
         response = await self.client.chat.completions.create(
             model=self.model,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            **(
+                {"reasoning_effort": settings.llm_reasoning_effort.strip()}
+                if settings.llm_reasoning_effort and settings.llm_reasoning_effort.strip()
+                else {}
+            ),
         )
 
         svg_code = response.choices[0].message.content.strip()

@@ -7,7 +7,10 @@ from databases import Database
 from app.agent.runtime import AgentContext, AgentTool
 
 
-def build_marketing_tools(db: Database) -> list[AgentTool]:
+def build_marketing_tools(
+    db: Database,
+    enabled_image_methods: list[str] | None = None,
+) -> list[AgentTool]:
     async def search_internet(arguments: dict[str, Any], _: AgentContext):
         from app.services.web_search_service import WebSearchService
 
@@ -97,18 +100,12 @@ def build_marketing_tools(db: Database) -> list[AgentTool]:
         "additionalProperties": False,
     }
     no_arguments_schema = {"type": "object", "properties": {}, "additionalProperties": False}
-    return [
+    tools = [
         AgentTool(
             name="search_internet",
             description="搜索公开互联网，获取最新市场、行业和竞品信息。",
             parameters=query_schema,
             handler=search_internet,
-        ),
-        AgentTool(
-            name="search_images",
-            description="按关键词搜索可用于营销素材参考的图片，返回图片 URL。",
-            parameters=query_schema,
-            handler=search_images,
         ),
         AgentTool(
             name="search_database",
@@ -123,3 +120,17 @@ def build_marketing_tools(db: Database) -> list[AgentTool]:
             handler=get_marketing_performance,
         ),
     ]
+
+    # 未配置限制时沿用“全部允许”的行为；配置了限制后，仅在 PEXELS 可用时暴露图片搜索工具。
+    if not enabled_image_methods or "PEXELS" in enabled_image_methods:
+        tools.insert(
+            1,
+            AgentTool(
+                name="search_images",
+                description="按关键词搜索可用于营销素材参考的图片，返回图片 URL。",
+                parameters=query_schema,
+                handler=search_images,
+            ),
+        )
+
+    return tools

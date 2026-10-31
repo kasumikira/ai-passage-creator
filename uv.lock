@@ -7,9 +7,9 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version < '3.12' and sys_platform == 'win32'",
     "python_full_version < '3.12' and sys_platform == 'emscripten'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 
@@ -19,14 +19,15 @@ version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
-    { name = "cos-python-sdk-v5" },
     { name = "cryptography" },
     { name = "databases", extra = ["mysql"] },
     { name = "docling-slim", extra = ["format-office", "format-pdf", "format-web"] },
     { name = "fastapi" },
     { name = "google-genai" },
     { name = "httpx" },
+    { name = "json-repair" },
     { name = "lxml" },
+    { name = "mermaidx" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -39,23 +40,24 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beautifulsoup4", specifier = ">=4.15.0,<5.0" },
-    { name = "cos-python-sdk-v5", specifier = ">=1.9.44,<2.0" },
-    { name = "cryptography", specifier = ">=50.0.2,<51" },
-    { name = "databases", extras = ["mysql"], specifier = ">=0.9,<0.10" },
-    { name = "docling-slim", extras = ["format-office", "format-web", "format-pdf"], specifier = ">=2.140,<3.0.0" },
-    { name = "fastapi", specifier = ">=0.162,<1.0" },
-    { name = "google-genai", specifier = ">=2.34,<3.0" },
-    { name = "httpx", specifier = ">=0.28.1,<1.0" },
-    { name = "lxml", specifier = ">=6.1.3,<7.0" },
-    { name = "openai", specifier = ">=3.42,<4.0" },
-    { name = "pydantic", specifier = ">=2.14.2,<3.0" },
-    { name = "pydantic-settings", specifier = ">=2.16.2,<3.0" },
-    { name = "pymysql", specifier = ">=1.2.3,<2.0" },
-    { name = "python-multipart", specifier = ">=0.0.32,<0.1" },
-    { name = "redis", specifier = ">=8.1,<9.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.55,<2.1" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.54,<1.0" },
+    { name = "beautifulsoup4", specifier = ">=4.15.0" },
+    { name = "cryptography", specifier = ">=50.0.2" },
+    { name = "databases", extras = ["mysql"], specifier = ">=0.9" },
+    { name = "docling-slim", extras = ["format-office", "format-web", "format-pdf"], specifier = ">=2.140" },
+    { name = "fastapi", specifier = ">=0.162" },
+    { name = "google-genai", specifier = ">=2.34" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "json-repair", specifier = ">=0.64.2" },
+    { name = "lxml", specifier = ">=6.1.3" },
+    { name = "mermaidx", specifier = ">=0.10.0" },
+    { name = "openai", specifier = ">=3.42" },
+    { name = "pydantic", specifier = ">=2.14.2" },
+    { name = "pydantic-settings", specifier = ">=2.16.2" },
+    { name = "pymysql", specifier = ">=1.2.3" },
+    { name = "python-multipart", specifier = ">=0.0.32" },
+    { name = "redis", specifier = ">=8.1" },
+    { name = "sqlalchemy", specifier = ">=2.0.55" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.54" },
 ]
 
 [[package]]
@@ -304,28 +306,6 @@ sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/d8/53/6f443c9a4a83
 wheels = [
     { url = "https://mirrors.nju.edu.cn/pypi/web/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6" },
 ]
-
-[[package]]
-name = "cos-python-sdk-v5"
-version = "1.9.44"
-source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
-dependencies = [
-    { name = "crcmod" },
-    { name = "pycryptodome" },
-    { name = "requests" },
-    { name = "six" },
-    { name = "xmltodict" },
-]
-sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/5e/c8/5cc0d0bd4b4bd9006976408bf390927fe51138658235c512a76799932de0/cos_python_sdk_v5-1.9.44.tar.gz", hash = "sha256:2ab403f3b64efdbb9a1984ad3e4381bd7f0755d1064148aeb25269bd757b49ab" }
-wheels = [
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/65/ed/4eabca16f3f9049ac0ee5bd17ef42709a6ede659e81e97f74e77a1aae30b/cos_python_sdk_v5-1.9.44-py3-none-any.whl", hash = "sha256:584a97ecd5e9b15b04a1e511e6dd0ea4eca00ee87fe50aa9a3c91ce716149bcb" },
-]
-
-[[package]]
-name = "crcmod"
-version = "1.7"
-source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
-sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/6b/b0/e595ce2a2527e169c3bcd6c33d2473c1918e0b7f6826a043ca1245dd4e5b/crcmod-1.7.tar.gz", hash = "sha256:dc7051a0db5f2bd48665a990d3ec1cc305a466a77358ca4492826f41f283601e" }
 
 [[package]]
 name = "cryptography"
@@ -963,6 +943,15 @@ wheels = [
 ]
 
 [[package]]
+name = "json-repair"
+version = "0.64.2"
+source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
+sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/7c/b2/52bdd0fca981b289a4d9966366e1dfe50fac315f2c87440fa70726bdcb69/json_repair-0.64.2.tar.gz", hash = "sha256:3f8e76631edab40e7e0c9b859e64c06992a39488b4bbb8285f0e9c3e61d684e9" }
+wheels = [
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/9a/79/91b83df91d03b9647ee759f286900957f0d113f49a606e28c8a43d39365b/json_repair-0.64.2-py3-none-any.whl", hash = "sha256:1dec7868c05abff0c52e91dc896e01f28fda6ba1c9f2a9ede18ab520dde637e1" },
+]
+
+[[package]]
 name = "jsonref"
 version = "1.1.0"
 source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
@@ -1176,6 +1165,41 @@ source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
 sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba" }
 wheels = [
     { url = "https://mirrors.nju.edu.cn/pypi/web/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8" },
+]
+
+[[package]]
+name = "mermaidx"
+version = "0.10.1"
+source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
+dependencies = [
+    { name = "novasvg" },
+    { name = "quickjs-ng" },
+    { name = "termaid" },
+]
+wheels = [
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/d8/0d/7ae2cf9f372dc4d6096a3f8f0a67e65163003b1250bfbce85c4a6c299dd9/mermaidx-0.10.1-py3-none-any.whl", hash = "sha256:aa2e44648a96629df21acab3cac0ee2d6caca044be72898819d09736ea2f160e" },
+]
+
+[[package]]
+name = "novasvg"
+version = "0.11.4"
+source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
+sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/cd/14/d57c285dfd418604665b5b938bf63525761cf963c96eca17013b1bd33acb/novasvg-0.11.4.tar.gz", hash = "sha256:97259e102c7a7577566a8f592765ef32583865d2c2a86d8fa5b524ba24b5d80f" }
+wheels = [
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/6e/50/0ffe5f71666ab9c7cb7c90bd798b20be022579b7efed11763fcc429a9f5d/novasvg-0.11.4-cp311-cp311-macosx_10_15_universal2.whl", hash = "sha256:165a2137b191b275c3a9c2c4eb10d8d982e0368a11214223ca60f07b46500c94" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/60/c4/680d92e009e41adcd4e9dda945fb30f75d532666ac2714aa45d6c93b16cc/novasvg-0.11.4-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d4496a03794d5e9553b0ff15c7902a3b991220eebfbb8d61ce3e9af140cd731c" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/b4/04/b999c40a63a199d0b782e94ead5801b85e53db24dc54a68949e030dc6bf5/novasvg-0.11.4-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f90149d9722a7b4161f703008af3076d8ab31a9a17e0659fba99d0259f14dc24" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/db/4a/20fcd59dce266b48541f9f4ba0eff4db2f79f0accfdc0e254e09a8f30721/novasvg-0.11.4-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:1622430d033074c6a206f0093a2d813e51d65defc184a954b26015c14c1b84be" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/64/bc/60afe4a55a7e5134abb5b72e8fef35c686f4a4d0228753151a4f3c245b5c/novasvg-0.11.4-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:fde2c42083a5f936df553755e4684122ed491dd048d4397427373f2da1a90522" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/ad/27/8f898ab1053f84f22b68fefd88e57e5a718c19ce195ce28cb8f2c18a1e47/novasvg-0.11.4-cp311-cp311-win32.whl", hash = "sha256:040fad7ae9f42d1b97969145d8473fd355fa2c1b13d3048cb9781facb20872ef" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/39/d3/4f7ad4246d0e0390c8c3a11c55b6319df8868ec5c83087f80b0f3b76e430/novasvg-0.11.4-cp311-cp311-win_amd64.whl", hash = "sha256:584c593b3a2603546cc92ca733ba5b9e61a9d2eddefc1b30ead54ee3eb9aee3b" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/96/f1/bb6e01703c75d9f1f2a3e72334ffbbfb32f74187ce1af55f2c504077c333/novasvg-0.11.4-cp312-abi3-macosx_10_15_universal2.whl", hash = "sha256:2a4cfd341f3e9de745eab7f8a5a13d685d541c97cc94df8d56c450c80432a9a6" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/3f/3e/83c527a7754d08717ef2731af43ac4853af820173c163e907b439fc827a9/novasvg-0.11.4-cp312-abi3-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:215661b9c637358673e06c56ab59b992e2bf16359e5583b4bbfb6cb6ce7c9727" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/8c/36/5a8eb61bcee66e18fd5754bb8454638e6a662d5c5f1f622bfa75b0a159aa/novasvg-0.11.4-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:504418acf6b63f65c6511f6929af4370f9d5212ddea2e2e436b6d60413fb5913" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/d9/d7/0dffa32e5bea17b8ef735511d8e322119b72852ee66338d90a1ddfff30d0/novasvg-0.11.4-cp312-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:eac223e25b55d7db890ded51fa201c8fa43119c2d8d4e8d49cb0ec15f05ba7aa" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/7d/02/772f73b82d2a6a53c843fac93c536759af2b59972814e271df79721d8c19/novasvg-0.11.4-cp312-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:fb46c362ee04ed153bd52d67146b4cfb653ea09794643fd3a7eaf33cbe9229bf" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/db/e9/adc779cfb94c39249b075f3dbb5aead3676c92a658122aeb56e5e376b86e/novasvg-0.11.4-cp312-abi3-win32.whl", hash = "sha256:eea08d08863b3004e6ddb21764d9096dda4c29e64dc90e7f86a89c8e669cfa0d" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/4c/6a/ac27fb0163253e114145742631a0cb97da1d788680a1f83229e3aa8dc820/novasvg-0.11.4-cp312-abi3-win_amd64.whl", hash = "sha256:62aa4b58771d57d77a5fd21fe61e91ed3fa50d530550722695b18cf593471df5" },
 ]
 
 [[package]]
@@ -1585,36 +1609,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pycryptodome"
-version = "3.23.0"
-source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
-sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/8e/a6/8452177684d5e906854776276ddd34eca30d1b1e15aa1ee9cefc289a33f5/pycryptodome-3.23.0.tar.gz", hash = "sha256:447700a657182d60338bab09fdb27518f8856aecd80ae4c6bdddb67ff5da44ef" }
-wheels = [
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/04/5d/bdb09489b63cd34a976cc9e2a8d938114f7a53a74d3dd4f125ffa49dce82/pycryptodome-3.23.0-cp313-cp313t-macosx_10_13_universal2.whl", hash = "sha256:0011f7f00cdb74879142011f95133274741778abba114ceca229adbf8e62c3e4" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/a7/ce/7840250ed4cc0039c433cd41715536f926d6e86ce84e904068eb3244b6a6/pycryptodome-3.23.0-cp313-cp313t-macosx_10_13_x86_64.whl", hash = "sha256:90460fc9e088ce095f9ee8356722d4f10f86e5be06e2354230a9880b9c549aae" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/ee/f0/991da24c55c1f688d6a3b5a11940567353f74590734ee4a64294834ae472/pycryptodome-3.23.0-cp313-cp313t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4764e64b269fc83b00f682c47443c2e6e85b18273712b98aa43bcb77f8570477" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/54/16/0e11882deddf00f68b68dd4e8e442ddc30641f31afeb2bc25588124ac8de/pycryptodome-3.23.0-cp313-cp313t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:eb8f24adb74984aa0e5d07a2368ad95276cf38051fe2dc6605cbcf482e04f2a7" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/d5/fc/4347fea23a3f95ffb931f383ff28b3f7b1fe868739182cb76718c0da86a1/pycryptodome-3.23.0-cp313-cp313t-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d97618c9c6684a97ef7637ba43bdf6663a2e2e77efe0f863cce97a76af396446" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/6e/d9/c5261780b69ce66d8cfab25d2797bd6e82ba0241804694cd48be41add5eb/pycryptodome-3.23.0-cp313-cp313t-musllinux_1_2_aarch64.whl", hash = "sha256:9a53a4fe5cb075075d515797d6ce2f56772ea7e6a1e5e4b96cf78a14bac3d265" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/5a/6f/3af2ffedd5cfa08c631f89452c6648c4d779e7772dfc388c77c920ca6bbf/pycryptodome-3.23.0-cp313-cp313t-musllinux_1_2_i686.whl", hash = "sha256:763d1d74f56f031788e5d307029caef067febf890cd1f8bf61183ae142f1a77b" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/9a/dc/9060d807039ee5de6e2f260f72f3d70ac213993a804f5e67e0a73a56dd2f/pycryptodome-3.23.0-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:954af0e2bd7cea83ce72243b14e4fb518b18f0c1649b576d114973e2073b273d" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/f9/34/e6c8ca177cb29dcc4967fef73f5de445912f93bd0343c9c33c8e5bf8cde8/pycryptodome-3.23.0-cp313-cp313t-win32.whl", hash = "sha256:257bb3572c63ad8ba40b89f6fc9d63a2a628e9f9708d31ee26560925ebe0210a" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/e4/1d/89756b8d7ff623ad0160f4539da571d1f594d21ee6d68be130a6eccb39a4/pycryptodome-3.23.0-cp313-cp313t-win_amd64.whl", hash = "sha256:6501790c5b62a29fcb227bd6b62012181d886a767ce9ed03b303d1f22eb5c625" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/5d/61/35a64f0feaea9fd07f0d91209e7be91726eb48c0f1bfc6720647194071e4/pycryptodome-3.23.0-cp313-cp313t-win_arm64.whl", hash = "sha256:9a77627a330ab23ca43b48b130e202582e91cc69619947840ea4d2d1be21eb39" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/db/6c/a1f71542c969912bb0e106f64f60a56cc1f0fabecf9396f45accbe63fa68/pycryptodome-3.23.0-cp37-abi3-macosx_10_9_universal2.whl", hash = "sha256:187058ab80b3281b1de11c2e6842a357a1f71b42cb1e15bce373f3d238135c27" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/6e/4e/a066527e079fc5002390c8acdd3aca431e6ea0a50ffd7201551175b47323/pycryptodome-3.23.0-cp37-abi3-macosx_10_9_x86_64.whl", hash = "sha256:cfb5cd445280c5b0a4e6187a7ce8de5a07b5f3f897f235caa11f1f435f182843" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/50/52/adaf4c8c100a8c49d2bd058e5b551f73dfd8cb89eb4911e25a0c469b6b4e/pycryptodome-3.23.0-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:67bd81fcbe34f43ad9422ee8fd4843c8e7198dd88dd3d40e6de42ee65fbe1490" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/5f/e9/a09476d436d0ff1402ac3867d933c61805ec2326c6ea557aeeac3825604e/pycryptodome-3.23.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c8987bd3307a39bc03df5c8e0e3d8be0c4c3518b7f044b0f4c15d1aa78f52575" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/f9/c5/ffe6474e0c551d54cab931918127c46d70cab8f114e0c2b5a3c071c2f484/pycryptodome-3.23.0-cp37-abi3-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:aa0698f65e5b570426fc31b8162ed4603b0c2841cbb9088e2b01641e3065915b" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/18/28/e199677fc15ecf43010f2463fde4c1a53015d1fe95fb03bca2890836603a/pycryptodome-3.23.0-cp37-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:53ecbafc2b55353edcebd64bf5da94a2a2cdf5090a6915bcca6eca6cc452585a" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/ce/ea/4fdb09f2165ce1365c9eaefef36625583371ee514db58dc9b65d3a255c4c/pycryptodome-3.23.0-cp37-abi3-musllinux_1_2_i686.whl", hash = "sha256:156df9667ad9f2ad26255926524e1c136d6664b741547deb0a86a9acf5ea631f" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/22/82/6edc3fc42fe9284aead511394bac167693fb2b0e0395b28b8bedaa07ef04/pycryptodome-3.23.0-cp37-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:dea827b4d55ee390dc89b2afe5927d4308a8b538ae91d9c6f7a5090f397af1aa" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/59/fe/aae679b64363eb78326c7fdc9d06ec3de18bac68be4b612fc1fe8902693c/pycryptodome-3.23.0-cp37-abi3-win32.whl", hash = "sha256:507dbead45474b62b2bbe318eb1c4c8ee641077532067fec9c1aa82c31f84886" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/54/2f/e97a1b8294db0daaa87012c24a7bb714147c7ade7656973fd6c736b484ff/pycryptodome-3.23.0-cp37-abi3-win_amd64.whl", hash = "sha256:c75b52aacc6c0c260f204cbdd834f76edc9fb0d8e0da9fbf8352ef58202564e2" },
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/18/3d/f9441a0d798bf2b1e645adc3265e55706aead1255ccdad3856dbdcffec14/pycryptodome-3.23.0-cp37-abi3-win_arm64.whl", hash = "sha256:11eeeb6917903876f134b56ba11abe95c0b0fd5e3330def218083c7d98bbcb3c" },
-]
-
-[[package]]
 name = "pydantic"
 version = "2.14.2"
 source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
@@ -1975,6 +1969,28 @@ wheels = [
 ]
 
 [[package]]
+name = "quickjs-ng"
+version = "0.17.0.2"
+source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
+sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/d6/a4/611b1c2e3a505dd66cc03fb6e5963f0550a09ef2bd7c51243a9237d64db8/quickjs_ng-0.17.0.2.tar.gz", hash = "sha256:43d2e48272208721a7aaea8e3f02d4b9318f12ef20cc4f5421b59d9a470706ef" }
+wheels = [
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/da/36/7e91b954af2229a3bd257bd2d380c0c740622a8ac49094f9c81ace850d8c/quickjs_ng-0.17.0.2-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:80dd1d2d4b83eef6bdf9ce85de020b99b8a641e52c809ba4b2193535a68dbd13" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/54/1e/f53ee49cb88c1a75f9abea0a1148d024bea1cce09cdf46a9c537ef39c79f/quickjs_ng-0.17.0.2-cp310-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:3f87be3bdadc5fae7bd1f1d711838b35ef850fdbd6e55bed2a7d3ebc76c1456d" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/bf/25/c4ae89980638fc9e81cfeab0ed876e8ce08f2d821a915c02409660c7010d/quickjs_ng-0.17.0.2-cp310-abi3-manylinux2014_i686.manylinux_2_17_i686.manylinux_2_28_i686.whl", hash = "sha256:88be7657cb5983e99a2ae3736ee145f00604cff69ccac45e4e1bd21dfb46cff5" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/0f/ad/8afe9aba7dbca9d6da0e92599f6f31bd5acb11d8c8c8c5a476292c2992ef/quickjs_ng-0.17.0.2-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:28cf98a33bf4c58f9d59957d0d71d8f7c72d9b85d80bdf63d0229b176f4353cd" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/f1/ab/a9447dc667d2c173973e07afb317ac19dc53e50e2ddbaac5d4a3673d5acb/quickjs_ng-0.17.0.2-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:718350f3ed2dee04ee21e8d22abde8490196c6746826c8c3b91c5664948238b7" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/43/c1/7ca4834725d292db566de8583e5f6c8240aec706e2fce5e5a8bc7496c802/quickjs_ng-0.17.0.2-cp310-abi3-musllinux_1_2_i686.whl", hash = "sha256:77bcbb35340142a2ad9c9caa40bdb6908ec44d12644ca27209f566c513fd3aef" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/d3/b0/4b051ba1f738575fb062bbeb9144413159b833cc98061d7b102f97111c25/quickjs_ng-0.17.0.2-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:bc3c4f2b2542ff624c74520670f4785a55f061cd7aaaaedef06ab6d4e18a7fed" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/5a/8d/6b72f2b02c5eebaad3f34ea2e39f5b871ae2b3e5f1c342cfdc474dc8c1c8/quickjs_ng-0.17.0.2-cp310-abi3-win32.whl", hash = "sha256:2303c84092a0ed62f4068f2d4c1a273fd6833509ceb53da72266f96ced7b4dfe" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/d0/0e/3923bd3bc864e107219ce1e6f1a156a48743f4c73b008109440889bbb727/quickjs_ng-0.17.0.2-cp310-abi3-win_amd64.whl", hash = "sha256:3052711482264fd98563a94a55444280659b955155506f333169d9dfd19db892" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/a1/19/f53ecf341e92f23bdfd525ca288a0192b83bb6ee09a13f8aa2f6fc937ed0/quickjs_ng-0.17.0.2-pp311-pypy311_pp73-macosx_11_0_arm64.whl", hash = "sha256:6e11fd97f9c5032f83e7d636f252756c0011a984d7d3c1aa3cfca1a49d800b4d" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/89/0d/7139242a89576787f306e24c9eb8c3aaf17de122867a8810e6bdf9eec480/quickjs_ng-0.17.0.2-pp311-pypy311_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:52f28a20c92e62b4282e808ef96d6cbbc4899fc8faa4a6754b3fa35b2fb4d4f9" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/94/56/210bbb549e11d149a924e693a6cb0a7b8b690b76b69cd8d301395675adb4/quickjs_ng-0.17.0.2-pp311-pypy311_pp73-manylinux2014_i686.manylinux_2_17_i686.manylinux_2_28_i686.whl", hash = "sha256:530f1d07be7a72bcb1241d48eb21f4b68ef1c79613913eae4f86b1aede73b04c" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/b9/95/f4ab8a88807a2a9ee50034cce275dd50fa7898ebeb7d0e62bbe8fd3aef52/quickjs_ng-0.17.0.2-pp311-pypy311_pp73-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4539c777fe30833dd7b405e965079bee35c614733f45a8f21ee64f55444c35cd" },
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/9b/f0/169e12d85c832314dc8facf04e3e3ccc2636678991d43b11eb7ef170c9f0/quickjs_ng-0.17.0.2-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:1920f007f00f16da4d8ab110110b1b2c9e19817775e837b45079d8f07b5ef96d" },
+]
+
+[[package]]
 name = "redis"
 version = "8.1.0"
 source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
@@ -2279,6 +2295,15 @@ wheels = [
 ]
 
 [[package]]
+name = "termaid"
+version = "0.10.0"
+source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
+sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/3a/cb/52d485f082feb65436ed60be9e609ec21cc48353f7c998e96cf4138fd595/termaid-0.10.0.tar.gz", hash = "sha256:56d543fdc0a30a11d9bb6131cf489f37e072f1229dc0948f8cb317597140b5d2" }
+wheels = [
+    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/10/72/d45b068ea5447b3b4d4f040c21abc5ffe2f054df4d7bc058348f7522737e/termaid-0.10.0-py3-none-any.whl", hash = "sha256:b884a616d30071643f8e93528b0ad68bd5696b41a7b5d31cd0554d2f990f28f2" },
+]
+
+[[package]]
 name = "tqdm"
 version = "4.70.1"
 source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
@@ -2550,13 +2575,4 @@ source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
 sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/9c/fb/31bdbf3737222d92ef7d2db4d50089b2253dbbb63ceb6d20a4447f6b7ed0/xlsxwriter-3.3.1.tar.gz", hash = "sha256:0867761912cceac76f97ffa76eeda18c623ae9217f601be8512f55b1af4bdb6e" }
 wheels = [
     { url = "https://mirrors.nju.edu.cn/pypi/web/packages/88/eb/1e6af9959a567901a7e7c7cef2e75883e487df223ed67f9a8977ff863bd8/xlsxwriter-3.3.1-py3-none-any.whl", hash = "sha256:8e2c89e59d733fe59e112317218c64fbbc276d90a8c144ebd6f7fa15e7ab184a" },
-]
-
-[[package]]
-name = "xmltodict"
-version = "1.0.2"
-source = { registry = "https://mirrors.nju.edu.cn/pypi/web/simple" }
-sdist = { url = "https://mirrors.nju.edu.cn/pypi/web/packages/6a/aa/917ceeed4dbb80d2f04dbd0c784b7ee7bba8ae5a54837ef0e5e062cd3cfb/xmltodict-1.0.2.tar.gz", hash = "sha256:54306780b7c2175a3967cad1db92f218207e5bc1aba697d887807c0fb68b7649" }
-wheels = [
-    { url = "https://mirrors.nju.edu.cn/pypi/web/packages/c0/20/69a0e6058bc5ea74892d089d64dfc3a62ba78917ec5e2cfa70f7c92ba3a5/xmltodict-1.0.2-py3-none-any.whl", hash = "sha256:62d0fddb0dcbc9f642745d8bbf4d81fd17d6dfaec5a15b5c1876300aad92af0d" },
 ]

@@ -159,7 +159,11 @@
             </h2>
             <div class="images-grid">
               <div v-for="image in article.images" :key="image.position" class="image-item">
-                <img :src="image.url" :alt="image.description" />
+                <img
+                  :src="resolveArticleImageUrl(image.url)"
+                  :alt="image.description"
+                  :crossorigin="image.url?.startsWith('dbimage://') ? 'use-credentials' : undefined"
+                />
                 <div class="image-info">
                   <span class="badge">{{ image.method }}</span>
                   <span class="keywords">{{ image.keywords }}</span>
@@ -191,7 +195,8 @@ import {
   ThunderboltOutlined
 } from '@ant-design/icons-vue'
 import { getArticle, getExecutionLogs } from '@/api/articleController'
-import { marked } from 'marked'
+import { exportAsMarkdown } from '@/utils/article'
+import { markdownToHtml, resolveArticleImageUrl } from '@/utils/markdown'
 import dayjs from 'dayjs'
 
 const router = useRouter()
@@ -202,11 +207,6 @@ const article = ref<API.ArticleVO | null>(null)
 const executionStats = ref<API.AgentExecutionStats | null>(null)
 const logsLoading = ref(false)
 const showExecutionLogs = ref(false)
-
-// Markdown 转 HTML
-const markdownToHtml = (markdown: string) => {
-  return marked(markdown)
-}
 
 // 加载文章
 const loadArticle = async () => {
@@ -248,43 +248,21 @@ const goBack = () => {
 }
 
 // 导出 Markdown
-const exportMarkdown = () => {
+const exportMarkdown = async () => {
   if (!article.value) return
-
-  let markdown = `# ${article.value.mainTitle}\n\n`
-  markdown += `> ${article.value.subTitle}\n\n`
-
-  // 优先使用完整图文
-  if (article.value.fullContent) {
-    markdown += article.value.fullContent
-  } else {
-    if (article.value.outline && article.value.outline.length > 0) {
-      markdown += `## 目录\n\n`
-      article.value.outline.forEach(item => {
-        markdown += `${item.section}. ${item.title}\n`
-      })
-      markdown += `\n---\n\n`
-    }
-
-    markdown += article.value.content || ''
-
-    if (article.value.images && article.value.images.length > 0) {
-      markdown += `\n\n## 配图\n\n`
-      article.value.images.forEach(image => {
-        markdown += `![${image.description}](${image.url})\n\n`
-      })
-    }
+  try {
+    await exportAsMarkdown({
+      title: article.value.mainTitle || '文章',
+      subTitle: article.value.subTitle,
+      content: article.value.content,
+      fullContent: article.value.fullContent,
+      outline: article.value.outline,
+      images: article.value.images,
+    })
+    message.success('导出成功')
+  } catch (error) {
+    message.error((error as Error).message || '导出失败')
   }
-
-  const blob = new Blob([markdown], { type: 'text/markdown' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${article.value.mainTitle}.md`
-  a.click()
-  URL.revokeObjectURL(url)
-
-  message.success('导出成功')
 }
 
 // 格式化日期

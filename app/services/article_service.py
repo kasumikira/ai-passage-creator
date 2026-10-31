@@ -132,7 +132,31 @@ class ArticleService:
         article = await self.db.fetch_one(query)
         throw_if_not(article, ErrorCode.NOT_FOUND_ERROR, "文章不存在")
         self._check_article_permission(article, login_user)
-        await self.db.execute(query="UPDATE article SET isDelete = 1 WHERE id = :id", values={"id": article_id})
+        async with self.db.transaction():
+            image_hashes = await self.db.fetch_all(
+                query="SELECT imageSha256 FROM article_image WHERE taskId = :taskId",
+                values={"taskId": article["taskId"]},
+            )
+            await self.db.execute(
+                query="DELETE FROM article_image WHERE taskId = :taskId",
+                values={"taskId": article["taskId"]},
+            )
+            for image in image_hashes:
+                await self.db.execute(
+                    query="""
+                        DELETE FROM image_blob
+                        WHERE sha256 = :sha256
+                          AND NOT EXISTS (
+                              SELECT 1 FROM article_image
+                              WHERE imageSha256 = :sha256
+                          )
+                    """,
+                    values={"sha256": image["imageSha256"]},
+                )
+            await self.db.execute(
+                query="UPDATE article SET isDelete = 1 WHERE id = :id",
+                values={"id": article_id},
+            )
         return True
 
     async def update_article_status(

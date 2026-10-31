@@ -5,7 +5,6 @@ from app.services.article_service import ArticleService
 from app.services.article_agent_service import ArticleAgentService
 from app.services.article_async_service import article_async_service
 from app.services.pexels_service import PexelsService
-from app.services.cos_service import CosService
 from app.services.nano_banana_service import NanoBananaService
 from app.services.mermaid_service import MermaidService
 from app.services.iconify_service import IconifyService
@@ -22,7 +21,6 @@ __all__ = [
     "ArticleAgentService",
     "article_async_service",
     "PexelsService",
-    "CosService",
     "NanoBananaService",
     "MermaidService",
     "IconifyService",

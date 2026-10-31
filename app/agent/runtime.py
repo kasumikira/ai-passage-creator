@@ -6,6 +6,7 @@ from typing import Any, Awaitable, Callable, Optional
 
 
 ToolHandler = Callable[[dict[str, Any], "AgentContext"], Awaitable[Any]]
+ToolEventHandler = Callable[[dict[str, Any]], None]
 
 
 @dataclass
@@ -56,10 +57,23 @@ class AgentRunResult:
 class AgentRunner:
     """Run agents with function tools, streaming text, and peer handoffs."""
 
-    def __init__(self, client, model: str, max_turns: int = 12):
+    def __init__(
+        self,
+        client,
+        model: str,
+        max_turns: int = 12,
+        reasoning_effort: Optional[str] = None,
+    ):
         self.client = client
         self.model = model
         self.max_turns = max_turns
+        self.reasoning_effort = reasoning_effort.strip() if reasoning_effort else None
+
+    @property
+    def request_options(self) -> dict[str, str]:
+        if not self.reasoning_effort:
+            return {}
+        return {"reasoning_effort": self.reasoning_effort}
 
     async def run(
         self,
@@ -67,6 +81,7 @@ class AgentRunner:
         prompt: str,
         context: Optional[AgentContext] = None,
         stream_handler: Optional[Callable[[str], None]] = None,
+        tool_event_handler: Optional[ToolEventHandler] = None,
     ) -> AgentRunResult:
         context = context or AgentContext()
         current_agent = agent
@@ -77,12 +92,21 @@ class AgentRunner:
         tool_call_count = 0
         handoffs: list[str] = []
 
+        def emit_tool_event(name: str, status: str, arguments: Optional[dict[str, Any]] = None):
+            if tool_event_handler:
+                tool_event_handler({
+                    "name": name,
+                    "status": status,
+                    "arguments": arguments or {},
+                })
+
         for _ in range(self.max_turns):
             tools, handlers, handoff_targets = self._build_tools(current_agent)
             request: dict[str, Any] = {
                 "model": self.model,
                 "messages": messages,
             }
+            request.update(self.request_options)
             if tools:
                 request["tools"] = tools
 
@@ -120,6 +144,7 @@ class AgentRunner:
                 call_id = call.get("id", "")
 
                 if name in handoff_targets:
+                    emit_tool_event(name, "running")
                     current_agent = handoff_targets[name]
                     handoffs.append(current_agent.name)
                     messages[0] = {
@@ -127,11 +152,18 @@ class AgentRunner:
                         "content": current_agent.instructions,
                     }
                     result = f"已将任务交接给 {current_agent.name}。"
+                    emit_tool_event(name, "completed")
                 else:
                     arguments = json.loads(function.get("arguments") or "{}")
-                    result = await handlers[name](arguments, context)
-                    if not isinstance(result, str):
-                        result = json.dumps(result, ensure_ascii=False, default=str)
+                    emit_tool_event(name, "running", arguments)
+                    try:
+                        result = await handlers[name](arguments, context)
+                        if not isinstance(result, str):
+                            result = json.dumps(result, ensure_ascii=False, default=str)
+                    except Exception:
+                        emit_tool_event(name, "failed", arguments)
+                        raise
+                    emit_tool_event(name, "completed", arguments)
 
                 messages.append({
                     "role": "tool",

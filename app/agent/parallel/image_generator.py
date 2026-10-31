@@ -18,6 +18,7 @@ class ParallelImageGenerator:
     async def generate(
         self,
         requirements: List[ImageRequirement],
+        task_id: str,
     ) -> List[Tuple[ImageRequirement, object]]:
         """并行生成图片，按输入顺序返回结果"""
         if not requirements:
@@ -33,7 +34,8 @@ class ParallelImageGenerator:
                     position=requirement.position,
                     type=requirement.type,
                 )
-                result = await self.image_service_strategy.get_image_and_upload(
+                result = await self.image_service_strategy.get_image_and_store(
+                    task_id,
                     requirement.image_source,
                     image_request,
                 )

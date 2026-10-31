@@ -2,6 +2,7 @@
 
 import asyncio
 from fastapi import APIRouter, Depends
+from fastapi.responses import Response
 from databases import Database
 
 from app.database import get_db
@@ -22,6 +23,7 @@ from app.schemas.statistics import AgentExecutionStatsVO
 from app.deps import require_login
 from app.managers.sse_manager import sse_emitter_manager
 from app.exceptions import ErrorCode, throw_if
+from app.constants.user import UserConstant
 
 router = APIRouter(prefix="/article", tags=["文章管理"])
 
@@ -81,6 +83,40 @@ async def get_progress(
     
     # 创建 SSE Emitter
     return sse_emitter_manager.create_emitter(task_id)
+
+
+@router.get("/images/{image_sha256}")
+async def get_article_image(
+    image_sha256: str,
+    db: Database = Depends(get_db),
+    current_user: LoginUserVO = Depends(require_login),
+):
+    """获取当前用户文章中引用的数据库图片。"""
+    image = await db.fetch_one(
+        query="""
+            SELECT imageBlob.imageData, imageBlob.mimeType
+            FROM image_blob AS imageBlob
+            WHERE imageBlob.sha256 = :sha256
+              AND EXISTS (
+                  SELECT 1
+                  FROM article_image AS articleImage
+                  INNER JOIN article ON article.taskId = articleImage.taskId
+                  WHERE articleImage.imageSha256 = imageBlob.sha256
+                    AND article.isDelete = 0
+                    AND (
+                        article.userId = :userId
+                        OR :isAdmin = 1
+                    )
+              )
+        """,
+        values={
+            "sha256": image_sha256,
+            "userId": current_user.id,
+            "isAdmin": current_user.user_role == UserConstant.ADMIN_ROLE,
+        },
+    )
+    throw_if(not image, ErrorCode.NOT_FOUND_ERROR, "图片不存在")
+    return Response(content=bytes(image["imageData"]), media_type=image["mimeType"])
 
 
 @router.get("/{task_id}", response_model=BaseResponse[ArticleVO])

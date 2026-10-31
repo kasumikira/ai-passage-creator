@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS article
     outline         JSON                               NULL COMMENT '大纲（JSON格式）',
     content         TEXT                               NULL COMMENT '正文（Markdown格式）',
     fullContent     TEXT                               NULL COMMENT '完整图文（Markdown格式，含配图）',
-    coverImage      VARCHAR(512)                       NULL COMMENT '封面图 URL',
+    coverImage      VARCHAR(512)                       NULL COMMENT '封面图 SHA-256 图片引用',
     images          JSON                               NULL COMMENT '配图列表（JSON数组，包含封面图 position=1）',
     status          VARCHAR(20) DEFAULT 'PENDING'      NOT NULL COMMENT '状态：PENDING/PROCESSING/COMPLETED/FAILED',
     phase           VARCHAR(50) DEFAULT 'PENDING' COMMENT '当前阶段：PENDING/TITLE_GENERATING/TITLE_SELECTING/OUTLINE_GENERATING/OUTLINE_EDITING/CONTENT_GENERATING',
@@ -102,6 +102,29 @@ SET @marketing_schema_sql = IF(
 PREPARE marketing_schema_stmt FROM @marketing_schema_sql;
 EXECUTE marketing_schema_stmt;
 DEALLOCATE PREPARE marketing_schema_stmt;
+
+-- 图片内容按 SHA-256 去重保存，文章图片表记录文章位置与内容哈希的关联。
+CREATE TABLE IF NOT EXISTS image_blob
+(
+    sha256      CHAR(64)    NOT NULL PRIMARY KEY COMMENT '图片内容 SHA-256',
+    mimeType    VARCHAR(100) NOT NULL COMMENT '图片 MIME 类型',
+    imageData   LONGBLOB    NOT NULL COMMENT '图片二进制数据',
+    createTime  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+) COMMENT '按内容哈希保存的图片' COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS article_image
+(
+    taskId       VARCHAR(64) NOT NULL COMMENT '文章任务ID',
+    position     INT         NOT NULL COMMENT '图片在文章中的位置',
+    imageSha256  CHAR(64)    NOT NULL COMMENT '图片内容 SHA-256',
+    createTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (taskId, position),
+    INDEX idx_article_image_sha256 (imageSha256),
+    CONSTRAINT fk_article_image_task
+        FOREIGN KEY (taskId) REFERENCES article (taskId) ON DELETE CASCADE,
+    CONSTRAINT fk_article_image_blob
+        FOREIGN KEY (imageSha256) REFERENCES image_blob (sha256)
+) COMMENT '文章与图片的关联' COLLATE = utf8mb4_unicode_ci;
 
 -- 产品档案（原始文档只在解析时使用，标准档案以 JSON 保存）
 CREATE TABLE IF NOT EXISTS product_profile

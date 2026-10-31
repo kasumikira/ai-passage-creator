@@ -29,7 +29,7 @@ class ImageSearchService(ABC):
 
     async def get_image_data(self, request: ImageRequest) -> Optional[ImageData]:
         """
-        获取图片数据（用于统一上传到 COS）
+        获取图片数据（用于统一存储到数据库）
         子类可重写此方法返回更高效的数据格式
 
         Args:

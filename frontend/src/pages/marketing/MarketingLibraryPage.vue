@@ -26,7 +26,7 @@
         <div class="panel-heading">
           <div>
             <h2>产品档案</h2>
-            <p>上传 DOCX、Markdown 或 PPT/PPTX，AI 会整理成标准档案；旧版 PPT 需要服务器安装 LibreOffice。</p>
+            <p>上传 DOCX、Markdown、PDF 或 PPT/PPTX；PDF 需含可复制文字，扫描件请先 OCR。旧版 PPT 需要服务器安装 LibreOffice。</p>
           </div>
           <a-button type="primary" :loading="uploading" @click="openFilePicker">
             <template #icon><CloudUploadOutlined /></template>
@@ -36,9 +36,20 @@
             ref="fileInput"
             class="file-input"
             type="file"
-            accept=".docx,.md,.ppt,.pptx"
+            accept=".docx,.md,.pdf,.ppt,.pptx"
             @change="handleFileChange"
           />
+        </div>
+
+        <div v-if="uploading" class="import-progress" role="status" aria-live="polite">
+          <div class="import-progress-copy">
+            <LoadingOutlined spin />
+            <div>
+              <strong>{{ uploadProgressMessage }}</strong>
+              <span>文档正在服务器处理，请保持此页面打开。</span>
+            </div>
+          </div>
+          <a-progress :percent="uploadProgressPercent" status="active" :show-info="false" />
         </div>
 
         <div v-if="products.length" class="product-grid">
@@ -76,7 +87,7 @@
             </a-collapse>
           </article>
         </div>
-        <a-empty v-else description="还没有产品档案。上传 DOCX、Markdown 或 PPT/PPTX 开始整理。" />
+        <a-empty v-else description="还没有产品档案。上传 DOCX、Markdown、PDF 或 PPT/PPTX 开始整理。" />
       </section>
 
       <section v-else class="platform-grid">
@@ -143,6 +154,7 @@ import {
   EditOutlined,
   FileTextOutlined,
   InboxOutlined,
+  LoadingOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
@@ -155,6 +167,7 @@ import {
   importProductProfile,
   updateMarketingPlatform,
   type MarketingPlatform,
+  type ProductImportProgress,
   type ProductProfile,
 } from '@/api/marketingController'
 
@@ -164,6 +177,13 @@ const products = ref<ProductProfile[]>([])
 const platforms = ref<MarketingPlatform[]>([])
 const loading = ref(false)
 const uploading = ref(false)
+const uploadProgressMessage = ref('')
+const uploadProgressPercent = ref(8)
+const importProgressPercentByStage: Record<string, number> = {
+  parsing: 25,
+  organizing: 65,
+  saving: 90,
+}
 const savingPlatform = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const editOpen = ref(false)
@@ -204,14 +224,21 @@ const handleFileChange = async (event: Event) => {
   const file = input.files?.[0]
   if (!file) return
   uploading.value = true
+  uploadProgressMessage.value = '正在上传文档…'
+  uploadProgressPercent.value = 8
   try {
-    const product = readResult(await importProductProfile(file))
+    const product = await importProductProfile(file, (progress: ProductImportProgress) => {
+      uploadProgressMessage.value = progress.message
+      uploadProgressPercent.value = importProgressPercentByStage[progress.stage] || uploadProgressPercent.value
+    })
+    uploadProgressPercent.value = 100
     products.value = [product, ...products.value]
     message.success(`已整理并保存「${product.name}」产品档案`)
   } catch (error) {
     message.error((error as Error).message || '产品档案整理失败')
   } finally {
     uploading.value = false
+    uploadProgressMessage.value = ''
     input.value = ''
   }
 }
@@ -274,6 +301,12 @@ onMounted(loadData)
 .panel-heading h2, .platform-card h2 { margin: 0 0 5px; font-size: 19px; }
 .panel-heading p { font-size: 13px; }
 .file-input { display: none; }
+.import-progress { margin-top: 18px; padding: 14px 16px; border: 1px solid #dbece2; border-radius: 12px; background: #f5faf6; }
+.import-progress-copy { display: flex; align-items: flex-start; gap: 11px; color: #287553; }
+.import-progress-copy div { display: grid; gap: 4px; }
+.import-progress-copy strong { color: #244b38; font-size: 13px; }
+.import-progress-copy div span { color: #7b8982; font-size: 12px; }
+.import-progress :deep(.ant-progress) { margin-top: 11px; margin-bottom: 0; }
 .product-grid, .platform-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 20px; }
 .product-card { padding: 19px; border: 1px solid #e7eee9; border-radius: 15px; background: #fbfdfb; }
 .card-topline { display: flex; justify-content: space-between; align-items: center; }

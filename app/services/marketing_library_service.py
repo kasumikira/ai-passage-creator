@@ -3,9 +3,10 @@
 import asyncio
 import json
 import logging
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from databases import Database
+from json_repair import loads as repairable_json_loads
 from openai import AsyncOpenAI
 
 from app.agent.runtime import Agent, AgentRunner
@@ -56,13 +57,24 @@ class MarketingLibraryService:
         owner_id: int,
         filename: str,
         content: bytes,
+        progress_callback: Optional[Callable[[str, str], None]] = None,
     ) -> dict[str, Any]:
+        if progress_callback:
+            progress_callback("parsing", "正在解析文档内容…")
         source_text = await asyncio.to_thread(extract_document_text, filename, content)
         if not source_text.strip():
+            if filename.lower().endswith(".pdf"):
+                raise ValueError("PDF 中没有可复制的文字；扫描件请先进行 OCR 再上传")
             raise ValueError("文档中没有可供整理的文字")
 
+        if progress_callback:
+            progress_callback("organizing", "文档解析完成，AI 正在整理产品档案…")
         client = AsyncOpenAI(api_key=settings.llm_api_key, base_url=settings.llm_base_url)
-        runner = AgentRunner(client, settings.llm_model)
+        runner = AgentRunner(
+            client,
+            settings.llm_model,
+            reasoning_effort=settings.llm_reasoning_effort,
+        )
         agent = Agent(
             name="产品档案整理专家",
             instructions=(
@@ -71,7 +83,9 @@ class MarketingLibraryService:
                 "字段缺失时用空字符串或空数组。"
                 "严格返回一个 JSON 对象，字段为 name、category、description、coreFeatures、"
                 "targetAudience、sellingPoints、differentiators、useCases、brandTone、"
-                "claimsToAvoid、faq、keywords。faq 每项包含 question 和 answer。"
+                "claimsToAvoid、faq、keywords。targetAudience 必须是字符串；coreFeatures、"
+                "sellingPoints、differentiators、useCases、claimsToAvoid、keywords 必须是字符串数组；"
+                "faq 必须是对象数组，每项的 question 和 answer 都是字符串。"
             ),
         )
         try:
@@ -81,7 +95,9 @@ class MarketingLibraryService:
             )
         finally:
             await client.close()
-        profile = ProductProfileData.model_validate(json.loads(result.final_output))
+        profile = ProductProfileData.model_validate(repairable_json_loads(result.final_output))
+        if progress_callback:
+            progress_callback("saving", "档案整理完成，正在保存…")
         product_id = await self.db.execute(
             query="""
                 INSERT INTO product_profile (ownerId, name, sourceFilename, profile)

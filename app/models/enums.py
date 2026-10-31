@@ -112,6 +112,9 @@ class SseMessageTypeEnum(str, Enum):
     # 智能体3流式输出（正文）
     AGENT3_STREAMING = "AGENT3_STREAMING"
 
+    # 智能体工具调用
+    TOOL_CALL = "TOOL_CALL"
+
     # 智能体3完成（生成正文）
     AGENT3_COMPLETE = "AGENT3_COMPLETE"
 

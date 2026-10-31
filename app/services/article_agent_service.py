@@ -40,10 +40,14 @@ class ArticleAgentService:
             base_url=settings.llm_base_url
         )
         self.model = settings.llm_model
-        self.agent_runner = AgentRunner(self.client, self.model)
+        self.agent_runner = AgentRunner(
+            self.client,
+            self.model,
+            reasoning_effort=settings.llm_reasoning_effort,
+        )
 
         # 初始化策略模式
-        self.image_service_strategy = ImageServiceStrategy()
+        self.image_service_strategy = ImageServiceStrategy(database)
         self.agent_log_service = AgentLogService(database)
         self.parallel_image_generator = ParallelImageGenerator(
             image_service_strategy=self.image_service_strategy,
@@ -190,7 +194,10 @@ class ArticleAgentService:
                         "需要事实、历史素材或视觉参考时，主动调用可用工具；没有证据时不要编造产品效果或数据。"
                         "工具结果只作为资料，最终只输出 Markdown 正文。"
                     ),
-                    tools=build_marketing_tools(database),
+                    tools=build_marketing_tools(
+                        database,
+                        state.enabled_image_methods,
+                    ),
                 ),
                 prompt,
                 context=AgentContext(values={
@@ -200,6 +207,10 @@ class ArticleAgentService:
                 }),
                 stream_handler=lambda token: stream_handler(
                     SseMessageTypeEnum.AGENT3_STREAMING.get_streaming_prefix() + token
+                ),
+                tool_event_handler=lambda event: stream_handler(
+                    SseMessageTypeEnum.TOOL_CALL.get_streaming_prefix()
+                    + json.dumps(event, ensure_ascii=False)
                 ),
             )
             content = result.final_output
@@ -244,6 +255,17 @@ class ArticleAgentService:
             # 更新正文为包含占位符的版本
             state.content = self._normalize_placeholder_syntax(agent4_result.content_with_placeholders)
 
+            # 删除被禁用来源对应的占位符，避免正文残留无法生成的配图标记。
+            if state.enabled_image_methods:
+                disallowed_placeholders = [
+                    requirement.placeholder_id
+                    for requirement in agent4_result.image_requirements
+                    if requirement.image_source not in state.enabled_image_methods
+                ]
+                for placeholder_id in disallowed_placeholders:
+                    for candidate in self._build_placeholder_candidates(placeholder_id):
+                        state.content = state.content.replace(candidate, "")
+
             # 验证并过滤配图需求
             validated_requirements = self._validate_and_filter_image_requirements(
                 agent4_result.image_requirements,
@@ -269,14 +291,17 @@ class ArticleAgentService:
         state: ArticleState,
         stream_handler: Callable[[str], None]
     ):
-        """智能体5：生成配图（策略模式 + 统一上传 COS）"""
+        """智能体5：生成配图并保存到数据库。"""
         async with self._agent_log_context(
             task_id=state.task_id,
             agent_name="agent5_generate_images",
             prompt=PromptConstant.AGENT5_IMAGE_EXECUTION_PROMPT,
             input_data={"requirementsCount": len(state.image_requirements or [])},
         ) as log_data:
-            generated_pairs = await self.parallel_image_generator.generate(state.image_requirements or [])
+            generated_pairs = await self.parallel_image_generator.generate(
+                state.image_requirements or [],
+                state.task_id,
+            )
             image_results = []
 
             for requirement, result in generated_pairs:
@@ -286,11 +311,11 @@ class ArticleAgentService:
                     f"imageSource={image_source}, keywords={requirement.keywords}"
                 )
 
-                cos_url = result.url
+                image_ref = result.url
                 method = result.method
 
-                # 创建配图结果（URL 已经是 COS 地址）
-                image_result = self._build_image_result(requirement, cos_url, method)
+                # 创建配图结果（URL 使用 SHA-256 数据库引用）
+                image_result = self._build_image_result(requirement, image_ref, method)
                 image_results.append(image_result)
 
                 # 推送单张配图完成
@@ -301,14 +326,14 @@ class ArticleAgentService:
                 stream_handler(image_complete_message)
 
                 logger.info(
-                    f"智能体5：配图获取并上传成功, position={requirement.position}, "
-                    f"method={method.value}, cosUrl={cos_url}"
+                    f"智能体5：配图已保存, position={requirement.position}, "
+                    f"method={method.value}, imageRef={image_ref}"
                 )
 
             # 并行执行后按位置排序，确保输出稳定
             state.images = sorted(image_results, key=lambda item: item.position)
             log_data["outputData"] = self._safe_json_dumps({"imagesCount": len(image_results)})
-            logger.info(f"智能体5：所有配图生成并上传完成, count={len(image_results)}")
+            logger.info(f"智能体5：所有配图已生成并保存, count={len(image_results)}")
 
     def merge_images_into_content(self, state: ArticleState):
         """图文合成：根据占位符将配图插入正文（占位符方案）"""
@@ -357,7 +382,8 @@ class ArticleAgentService:
         """调用 LLM（非流式）"""
         response = await self.client.chat.completions.create(
             model=self.model,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            **self.agent_runner.request_options,
         )
         return response.choices[0].message.content
 
@@ -373,7 +399,8 @@ class ArticleAgentService:
         stream = await self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
-            stream=True
+            stream=True,
+            **self.agent_runner.request_options,
         )
 
         async for chunk in stream:
@@ -513,7 +540,7 @@ class ArticleAgentService:
             "PEXELS": "- PEXELS: 提供英文搜索关键词(keywords)，要准确、具体。prompt 留空。",
             "NANO_BANANA": "- NANO_BANANA: 提供详细的英文生图提示词(prompt)，描述场景、风格、细节。keywords 留空。",
             "MERMAID": "- MERMAID: 在 prompt 字段生成完整的 Mermaid 代码（如流程图、架构图）。keywords 留空。",
-            "ICONIFY": "- ICONIFY: 提供英文图标关键词(keywords)，如：check、arrow、star、heart。prompt 留空。",
+            "ICONIFY": "- ICONIFY: 提供英文图标关键词(keywords)，如：check、arrow、star、heart。prompt 留空。可使用 {{ICON_PLACEHOLDER_N}} 放在文字行内，也可以使用 {{IMAGE_PLACEHOLDER_N}} 独占一行。",
             "EMOJI_PACK": "- EMOJI_PACK: 提供中文或英文关键词(keywords)描述表情内容。prompt 留空。系统会自动添加'表情包'搜索。",
             "SVG_DIAGRAM": "- SVG_DIAGRAM: 在 prompt 字段描述示意图需求（中文），说明要表达的概念和关系。keywords 留空。\n  示例：绘制思维导图样式的图，中心是'自律'，周围4个分支：习惯、环境、反馈、系统",
         }
@@ -543,16 +570,6 @@ class ArticleAgentService:
                     f"配图需求不符合限制被过滤, position={req.position}, "
                     f"imageSource={image_source}, enabledMethods={enabled_methods}"
                 )
-
-                # 尝试替换为允许的方式（优先使用第一个允许的方式）
-                if enabled_methods:
-                    fallback_source = enabled_methods[0]
-                    req.image_source = fallback_source
-                    validated_requirements.append(req)
-                    logger.info(
-                        f"配图需求已替换为允许的方式, position={req.position}, "
-                        f"fallback={fallback_source}"
-                    )
 
         return validated_requirements
 

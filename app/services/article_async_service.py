@@ -203,6 +203,11 @@ class ArticleAsyncService:
                 SseMessageTypeEnum.AGENT3_STREAMING,
                 message[len(streaming_prefix3):]
             )
+
+        tool_call_prefix = SseMessageTypeEnum.TOOL_CALL.get_streaming_prefix()
+        if message.startswith(tool_call_prefix):
+            tool_event = json.loads(message[len(tool_call_prefix):])
+            return {"type": SseMessageTypeEnum.TOOL_CALL.value, **tool_event}
         
         if message.startswith(image_complete_prefix):
             image_json = message[len(image_complete_prefix):]

@@ -538,7 +538,7 @@ import {
 } from '@ant-design/icons-vue'
 import { createArticle, confirmTitle, confirmOutline } from '@/api/articleController'
 import { connectSSE, closeSSE, type SSEMessage } from '@/utils/sse'
-import { marked } from 'marked'
+import { markdownToHtml } from '@/utils/markdown'
 import { getMarketingPlatforms, getProductProfiles, type MarketingPlatform, type ProductProfile } from '@/api/marketingController'
 import TitleSelectingStage from './components/TitleSelectingStage.vue'
 import OutlineEditingStage from './components/OutlineEditingStage.vue'
@@ -596,6 +596,12 @@ interface RealtimeLog {
   message: string
 }
 const realtimeLogs = ref<RealtimeLog[]>([])
+const toolLabels: Record<string, string> = {
+  search_internet: '搜索互联网',
+  search_images: '搜索图片',
+  search_database: '搜索资料库',
+  get_marketing_performance: '读取营销效果数据',
+}
 
 // 标题方案
 const titleOptions = ref<Array<{mainTitle: string, subTitle: string}>>([])
@@ -673,11 +679,6 @@ const article = ref<Partial<API.ArticleVO>>({
 })
 
 let eventSource: EventSource | null = null
-
-// Markdown 转 HTML
-const markdownToHtml = (markdown: string | undefined) => {
-  return marked(markdown || '')
-}
 
 // 自动滚动到底部
 const scrollToBottom = () => {
@@ -814,6 +815,21 @@ const handleSSEMessage = (msg: SSEMessage) => {
       currentStep.value = 3
       addLog('正文生成完成', 'success')
       break
+
+    case 'TOOL_CALL': {
+      const toolName = toolLabels[msg.name] || msg.name || '未知工具'
+      const rawQuery = msg.arguments?.query
+      const query = typeof rawQuery === 'string' ? rawQuery.trim() : ''
+      const queryText = query ? `：${query.length > 120 ? `${query.slice(0, 120)}…` : query}` : ''
+      if (msg.status === 'running') {
+        addLog(`正在调用${toolName}${queryText}`, 'info')
+      } else if (msg.status === 'completed') {
+        addLog(`${toolName}调用完成`, 'success')
+      } else {
+        addLog(`${toolName}调用失败`, 'error')
+      }
+      break
+    }
 
     case 'AGENT4_COMPLETE':
       // 配图分析完成，进入配图生成步骤
