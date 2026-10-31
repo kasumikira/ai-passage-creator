@@ -55,7 +55,7 @@ class PexelsService(ImageSearchService):
     def _build_search_url(self, keywords: str) -> str:
         """构建搜索 URL"""
         return (
-            f"{ArticleConstant.PEXELS_API_URL}"
+            f"{settings.pexels_api_url}"
             f"?query={keywords}"
             f"&per_page={ArticleConstant.PEXELS_PER_PAGE}"
             f"&orientation={ArticleConstant.PEXELS_ORIENTATION_LANDSCAPE}"

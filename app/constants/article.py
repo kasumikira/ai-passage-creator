@@ -10,9 +10,6 @@ class ArticleConstant:
     # SSE 重连时间（毫秒）：3秒
     SSE_RECONNECT_TIME_MS = 3000
 
-    # Pexels API 地址
-    PEXELS_API_URL = "https://api.pexels.com/v1/search"
-
     # Pexels 每页返回数量
     PEXELS_PER_PAGE = 1
 

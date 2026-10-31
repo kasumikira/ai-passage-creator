@@ -6,7 +6,7 @@
 
 基于 FastAPI + Vue 3 的多智能体图文创作平台，自动完成从选题、大纲、正文到配图的全流程创作
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-7.0-646CFF?style=flat-square&logo=vite&logoColor=white)
@@ -102,15 +102,15 @@ AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文�
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
-| FastAPI | 0.115 | Web 框架 |
-| Uvicorn | 0.32 | ASGI 服务器 |
+| FastAPI | 0.162 | Web 框架 |
+| Uvicorn | 0.54 | ASGI 服务器 |
 | SQLAlchemy | 2.0 | ORM / 查询构建 |
 | databases | 0.9 | 异步数据库访问 |
-| PyMySQL | 1.1 | MySQL/MariaDB 驱动 |
+| PyMySQL | 1.2 | MySQL/MariaDB 驱动 |
 | MariaDB / MySQL | 10.x / 8.0 | 数据存储 |
-| Redis | 7.x | Session 与统计缓存 |
-| OpenAI SDK | 1.58 | 调用 DashScope（通义千问）兼容接口 |
-| Google Gen AI SDK | 1.35 | Gemini AI 生图（Nano Banana） |
+| Redis | 8.x | Session 与统计缓存 |
+| OpenAI SDK | 3.42 | 调用 OpenAI 兼容接口（默认 DeepSeek） |
+| Google Gen AI SDK | 2.34 | Gemini AI 生图（Nano Banana） |
 | 腾讯云 COS SDK | 1.9 | 对象存储（配图上传） |
 
 ### 前端
@@ -131,7 +131,7 @@ AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文�
 
 ### 环境要求
 
-- Python 3.10+（推荐使用 [uv](https://docs.astral.sh/uv/) 管理环境）
+- Python 3.11+（推荐使用 [uv](https://docs.astral.sh/uv/) 管理环境）
 - Node.js 18+
 - MariaDB 10.x（或 MySQL 8.0）
 - Redis 7.x
@@ -159,7 +159,7 @@ cp .env.example .env
 编辑 `.env`，填写必需的 API Key：
 
 ```dotenv
-DASHSCOPE_API_KEY=your-dashscope-api-key  # 必填，通义千问
+LLM_API_KEY=your-llm-api-key         # 必填，OpenAI 兼容端点的 API Key
 PEXELS_API_KEY=your-pexels-api-key        # 必填，Pexels 图库
 ```
 
@@ -189,9 +189,10 @@ npm run dev
 
 | 变量名 | 必需 | 默认值 | 说明 |
 |--------|------|--------|------|
-| DASHSCOPE_API_KEY | ✅ | dummy | 通义千问 API Key |
+| LLM_API_KEY | ✅ | dummy | AI 文本生成 API Key（OpenAI 兼容端点） |
 | PEXELS_API_KEY | ✅ | dummy | Pexels 图片 API Key |
-| DASHSCOPE_MODEL | - | qwen-plus | 大模型名称 |
+| LLM_BASE_URL | - | https://api.deepseek.com | OpenAI 兼容端点地址 |
+| LLM_MODEL | - | deepseek-flash | 大模型名称 |
 | DB_HOST / DB_PORT | - | 127.0.0.1 / 3306 | 数据库地址 |
 | DB_NAME | - | ai_passage_creator | 数据库名 |
 | DB_USER / DB_PASSWORD | - | root / 1234 | 数据库账号 |
@@ -199,7 +200,10 @@ npm run dev
 | REDIS_PASSWORD | - | 1234 | Redis 密码 |
 | SERVER_PORT | - | 8567 | 后端端口 |
 | TENCENT_COS_SECRET_ID / _SECRET_KEY | - | dummy | 腾讯云 COS（配图上传） |
-| NANO_BANANA_API_KEY | - | dummy | Gemini AI 生图 |
+| IMAGE_GEN_FORMAT | - | google-genai | 生图协议格式：google-genai / openai |
+| IMAGE_GEN_API_KEY | - | dummy | AI 生图 API Key |
+| IMAGE_GEN_BASE_URL | - | 空 | 生图端点，留空使用所选格式的官方地址 |
+| IMAGE_GEN_MODEL | - | gemini-2.5-flash-image | 生图模型名称 |
 
 完整列表见 [.env.example](.env.example)。
 
@@ -270,7 +274,7 @@ enabledImageMethods  -- 允许的配图方式（JSON 数组，空表示全部可
 
 | 服务 | 获取地址 | 说明 |
 |------|---------|------|
-| 通义千问 DashScope | https://bailian.console.aliyun.com | 必需，驱动所有文本智能体 |
+| DeepSeek | https://platform.deepseek.com | 必需，驱动所有文本智能体 |
 | Pexels | https://www.pexels.com/api/ | 必需，默认图库检索 |
 | 腾讯云 COS | https://console.cloud.tencent.com | 配图上传 |
 | Gemini（Nano Banana） | Google AI Studio | AI 生图 |
@@ -346,7 +350,3 @@ class NewMethodService(ImageSearchService):
 1. 在 `ArticleStyleEnum` 添加枚举值
 2. 在 `app/constants/prompt.py` 添加对应的 Prompt 附加内容
 3. 在 `ArticleAgentService._get_style_prompt()` 添加映射
-
-## 👨‍💻 作者
-
-<a href="https://codefather.cn">编程导航学习圈</a>

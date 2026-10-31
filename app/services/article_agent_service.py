@@ -32,12 +32,12 @@ class ArticleAgentService:
     """文章智能体编排服务"""
 
     def __init__(self):
-        # 初始化 OpenAI 客户端（DashScope 兼容）
+        # 初始化 OpenAI 兼容客户端（端点与模型可配置）
         self.client = AsyncOpenAI(
-            api_key=settings.dashscope_api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+            api_key=settings.llm_api_key,
+            base_url=settings.llm_base_url
         )
-        self.model = settings.dashscope_model
+        self.model = settings.llm_model
 
         # 初始化策略模式
         self.image_service_strategy = ImageServiceStrategy()

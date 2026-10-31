@@ -35,12 +35,14 @@ class Settings(BaseSettings):
     # 密码加密盐值
     password_salt: str = "5a2b585d0ffbdd219c0a50fa423a98ea254b78c3a4133ba3cd6f15a6d05f0d76"
 
-    # AI 配置
-    dashscope_api_key: str = "dummy"
-    dashscope_model: str = "qwen-plus"
+    # AI 文本生成配置（OpenAI 兼容协议，默认 DeepSeek 官方端点）
+    llm_api_key: str = "dummy"
+    llm_base_url: str = "https://api.deepseek.com"
+    llm_model: str = "deepseek-flash"
 
     # Pexels 图片搜索
     pexels_api_key: str = "dummy"
+    pexels_api_url: str = "https://api.pexels.com/v1/search"
 
     # 腾讯云 COS
     tencent_cos_secret_id: str = "dummy"
@@ -49,12 +51,14 @@ class Settings(BaseSettings):
     tencent_cos_bucket: str = "dummy"
     tencent_cos_domain: str = "dummy"
 
-    # Nano Banana / Gemini AI 生图
-    nano_banana_api_key: str = "dummy"
-    nano_banana_model: str = "gemini-2.5-flash-image"
-    nano_banana_aspect_ratio: str = "16:9"
-    nano_banana_image_size: str = "1K"
-    nano_banana_output_mime_type: str = "image/png"
+    # AI 生图配置（格式：google-genai=Google GenAI 协议 / openai=OpenAI images 兼容协议）
+    image_gen_format: str = "google-genai"
+    image_gen_api_key: str = "dummy"
+    image_gen_base_url: str = ""  # 留空使用所选格式的官方端点
+    image_gen_model: str = "gemini-2.5-flash-image"
+    image_gen_aspect_ratio: str = "16:9"
+    image_gen_image_size: str = "1K"
+    image_gen_output_mime_type: str = "image/png"
 
     # Mermaid 配置
     mermaid_cli_command: str = "mmdc"
