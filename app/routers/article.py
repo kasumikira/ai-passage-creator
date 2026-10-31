@@ -40,13 +40,12 @@ async def create_article(
     )
     
     service = ArticleService(db)
-    
-    # 检查并消耗配额 + 创建文章任务（在同一事务中）
-    task_id = await service.create_article_task_with_quota_check(
+
+    task_id = await service.create_article_task(
         request.topic,
         current_user,
-        request.style,  # 第 5 期新增
-        request.enabled_image_methods  # 第 5 期新增
+        request.style,
+        request.enabled_image_methods
     )
     
     # 异步执行阶段1：生成标题方案

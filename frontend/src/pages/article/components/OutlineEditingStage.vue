@@ -63,16 +63,12 @@
       </div>
     </div>
 
-    <div class="ai-chat-section" :class="{ 'vip-only': !isVip }">
+    <div class="ai-chat-section">
       <div class="chat-header">
         <RobotOutlined />
         <span>AI 助手修改大纲</span>
-        <span v-if="!isVip" class="vip-badge-small">
-          <CrownOutlined />
-          VIP
-        </span>
       </div>
-      <div v-if="isVip" class="chat-input-wrapper">
+      <div class="chat-input-wrapper">
         <a-textarea
           v-model:value="modifySuggestion"
           placeholder="告诉 AI 如何修改大纲，例如：请在第二章节后增加一个关于实践案例的章节"
@@ -93,13 +89,6 @@
           </template>
           AI 修改大纲
         </a-button>
-      </div>
-      <div v-else class="vip-upgrade-notice">
-        <CrownOutlined class="vip-icon" />
-        <p>AI 修改大纲功能仅限 VIP 会员使用</p>
-        <RouterLink to="/vip" class="upgrade-btn">
-          立即升级 VIP
-        </RouterLink>
       </div>
     </div>
 
@@ -134,12 +123,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { CheckOutlined, DeleteOutlined, PlusOutlined, RobotOutlined, CrownOutlined } from '@ant-design/icons-vue'
+import { CheckOutlined, DeleteOutlined, PlusOutlined, RobotOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import Sortable from 'sortablejs'
 import { aiModifyOutline } from '@/api/articleController'
-import { useLoginUserStore } from '@/stores/loginUser'
-import { isVip as checkIsVip } from '@/utils/permission'
 
 interface OutlineSection {
   section: number
@@ -162,11 +149,6 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<Emits>()
-
-const loginUserStore = useLoginUserStore()
-
-// 判断是否为 VIP（管理员也视为 VIP）
-const isVip = computed(() => checkIsVip(loginUserStore.loginUser))
 
 // 转换 API 类型为内部类型
 const outlineSections = ref<OutlineSection[]>(
@@ -414,11 +396,6 @@ const handleAiModify = async () => {
   border-radius: var(--radius-lg);
   padding: 24px;
   margin-bottom: 32px;
-
-  &.vip-only {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(22, 163, 74, 0.02) 100%);
-    border-color: var(--color-primary);
-  }
 }
 
 .chat-header {
@@ -432,57 +409,6 @@ const handleAiModify = async () => {
 
   .anticon {
     font-size: 18px;
-  }
-
-  .vip-badge-small {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    border-radius: var(--radius-full);
-    font-size: 11px;
-    font-weight: 600;
-    background: var(--gradient-primary);
-    color: white;
-    margin-left: auto;
-  }
-}
-
-.vip-upgrade-notice {
-  text-align: center;
-  padding: 20px;
-
-  .vip-icon {
-    font-size: 48px;
-    color: var(--color-primary);
-    margin-bottom: 12px;
-  }
-
-  p {
-    margin: 0 0 16px;
-    color: var(--color-text-secondary);
-    font-size: 14px;
-  }
-
-  .upgrade-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 24px;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 600;
-    background: var(--gradient-primary);
-    color: white;
-    text-decoration: none;
-    transition: all 0.3s;
-    box-shadow: var(--shadow-green);
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
-      color: white;
-    }
   }
 }
 

@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 class ArticleAgentService:
     """文章智能体编排服务"""
-    
+
     def __init__(self):
         # 初始化 OpenAI 客户端（DashScope 兼容）
         self.client = AsyncOpenAI(
@@ -38,8 +38,8 @@ class ArticleAgentService:
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
         )
         self.model = settings.dashscope_model
-        
-        # 初始化策略模式（第 5 期改动）
+
+        # 初始化策略模式
         self.image_service_strategy = ImageServiceStrategy()
         self.agent_log_service = AgentLogService(database)
         self.parallel_image_generator = ParallelImageGenerator(
@@ -48,7 +48,7 @@ class ArticleAgentService:
             fail_fast=settings.agent_image_fail_fast,
         )
         self.orchestrator = ArticleAgentOrchestrator()
-    
+
     async def execute_phase1_generate_titles(
         self,
         state: ArticleState,
@@ -56,7 +56,7 @@ class ArticleAgentService:
     ):
         """
         阶段1：生成标题方案
-        
+
         Args:
             state: 文章状态
             stream_handler: 流式输出处理器
@@ -90,11 +90,11 @@ class ArticleAgentService:
         except Exception as e:
             logger.error(f"阶段3失败, taskId={state.task_id}, error={e}")
             raise RuntimeError(f"正文生成失败: {str(e)}")
-    
+
     async def agent1_generate_title_options(self, state: ArticleState):
         """智能体1：生成标题方案（3-5个）"""
         prompt = PromptConstant.AGENT1_TITLE_PROMPT.replace("{topic}", state.topic)
-        prompt += self._get_style_prompt(state.style)  # 第 5 期新增：风格 Prompt
+        prompt += self._get_style_prompt(state.style)  # 风格 Prompt
 
         async with self._agent_log_context(
             task_id=state.task_id,
@@ -107,7 +107,7 @@ class ArticleAgentService:
             state.title_options = [TitleOption(**item) for item in title_options_data]
             log_data["outputData"] = self._safe_json_dumps({"optionsCount": len(state.title_options)})
             logger.info("智能体1：标题方案生成成功, count=%s", len(state.title_options))
-    
+
     async def agent2_generate_outline(
         self,
         state: ArticleState,
@@ -127,7 +127,7 @@ class ArticleAgentService:
             .replace("{subTitle}", state.title.sub_title)
             .replace("{descriptionSection}", description_section)
         )
-        prompt += self._get_style_prompt(state.style)  # 第 5 期新增：风格 Prompt
+        prompt += self._get_style_prompt(state.style)  # 风格 Prompt
 
         async with self._agent_log_context(
             task_id=state.task_id,
@@ -147,7 +147,7 @@ class ArticleAgentService:
             state.outline = OutlineResult(sections=sections)
             log_data["outputData"] = self._safe_json_dumps({"sectionsCount": len(state.outline.sections)})
             logger.info(f"智能体2：大纲生成成功, sections={len(state.outline.sections)}")
-    
+
     async def agent3_generate_content(
         self,
         state: ArticleState,
@@ -164,7 +164,7 @@ class ArticleAgentService:
             .replace("{subTitle}", state.title.sub_title)
             .replace("{outline}", outline_text)
         )
-        prompt += self._get_style_prompt(state.style)  # 第 5 期新增：风格 Prompt
+        prompt += self._get_style_prompt(state.style)  # 风格 Prompt
 
         async with self._agent_log_context(
             task_id=state.task_id,
@@ -182,9 +182,9 @@ class ArticleAgentService:
             state.content = content
             log_data["outputData"] = self._safe_json_dumps({"contentLength": len(content)})
             logger.info(f"智能体3：正文生成成功, length={len(content)}")
-    
+
     async def agent4_analyze_image_requirements(self, state: ArticleState):
-        """智能体4：分析配图需求（第 5 期：占位符方案）"""
+        """智能体4：分析配图需求（占位符方案）"""
         # 构建可用配图方式说明
         available_methods = self._build_available_methods_description(
             state.enabled_image_methods
@@ -234,13 +234,13 @@ class ArticleAgentService:
                 f"智能体4：配图需求分析成功, count={len(agent4_result.image_requirements)}, "
                 f"validated={len(validated_requirements)}, 已在正文中插入占位符"
             )
-    
+
     async def agent5_generate_images(
         self,
         state: ArticleState,
         stream_handler: Callable[[str], None]
     ):
-        """智能体5：生成配图（第 5 期：策略模式 + 统一上传 COS）"""
+        """智能体5：生成配图（策略模式 + 统一上传 COS）"""
         async with self._agent_log_context(
             task_id=state.task_id,
             agent_name="agent5_generate_images",
@@ -280,9 +280,9 @@ class ArticleAgentService:
             state.images = sorted(image_results, key=lambda item: item.position)
             log_data["outputData"] = self._safe_json_dumps({"imagesCount": len(image_results)})
             logger.info(f"智能体5：所有配图生成并上传完成, count={len(image_results)}")
-    
+
     def merge_images_into_content(self, state: ArticleState):
-        """图文合成：根据占位符将配图插入正文（第 5 期：占位符方案）"""
+        """图文合成：根据占位符将配图插入正文（占位符方案）"""
         with self._agent_log_context_sync(
             task_id=state.task_id,
             agent_name="agent6_merge_content",
@@ -310,9 +310,9 @@ class ArticleAgentService:
             state.full_content = full_content
             log_data["outputData"] = self._safe_json_dumps({"fullContentLength": len(full_content)})
             logger.info(f"图文合成完成, fullContentLength={len(full_content)}")
-    
+
     # region 辅助方法
-    
+
     async def _call_llm(self, prompt: str) -> str:
         """调用 LLM（非流式）"""
         response = await self.client.chat.completions.create(
@@ -320,7 +320,7 @@ class ArticleAgentService:
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
-    
+
     async def _call_llm_with_streaming(
         self,
         prompt: str,
@@ -329,21 +329,21 @@ class ArticleAgentService:
     ) -> str:
         """调用 LLM（流式输出）"""
         content_builder = []
-        
+
         stream = await self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             stream=True
         )
-        
+
         async for chunk in stream:
             if chunk.choices[0].delta.content:
                 content = chunk.choices[0].delta.content
                 content_builder.append(content)
                 stream_handler(message_type.get_streaming_prefix() + content)
-        
+
         return "".join(content_builder)
-    
+
     def _parse_json_response(self, content: str, name: str) -> dict:
         """解析 JSON 响应"""
         try:
@@ -371,7 +371,7 @@ class ArticleAgentService:
         except ValueError as e:
             logger.error(f"{name}解析失败, content={content}, error={e}")
             raise RuntimeError(f"{name}解析失败")
-    
+
     def _build_image_result(
         self,
         requirement: ImageRequirement,
@@ -386,11 +386,11 @@ class ArticleAgentService:
             keywords=requirement.keywords,
             sectionTitle=requirement.section_title,
             description=requirement.type,
-            placeholderId=requirement.placeholder_id  # 第 5 期新增
+            placeholderId=requirement.placeholder_id
         )
-    
+
     def _get_style_prompt(self, style: Optional[str]) -> str:
-        """根据风格获取对应的 Prompt 附加内容（第 5 期新增）"""
+        """根据风格获取对应的 Prompt 附加内容"""
         if not style:
             return ""
 
@@ -669,5 +669,5 @@ class ArticleAgentService:
             icon_four = "{{" + icon_two + "}}"
             content = content.replace(image_four, image_two).replace(icon_four, icon_two)
         return content
-    
+
     # endregion

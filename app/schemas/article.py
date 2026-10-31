@@ -7,8 +7,8 @@ from app.schemas.common import PageRequest
 
 
 class ArticleCreateRequest(BaseModel):
-    """创建文章请求（第 5 期：新增风格和配图方式选择）"""
-    
+    """创建文章请求（新增风格和配图方式选择）"""
+
     topic: str = Field(..., min_length=1, description="选题")
     style: Optional[str] = Field(None, description="文章风格：tech/emotional/educational/humorous")
     enabled_image_methods: Optional[List[str]] = Field(
@@ -20,7 +20,7 @@ class ArticleCreateRequest(BaseModel):
 
 class ArticleQueryRequest(PageRequest):
     """文章查询请求"""
-    
+
     id: Optional[int] = Field(None, description="文章 ID")
     task_id: Optional[str] = Field(None, alias="taskId", description="任务 ID")
     user_id: Optional[int] = Field(None, alias="userId", description="用户 ID")
@@ -40,7 +40,7 @@ class TitleOption(BaseModel):
 
 class ArticleVO(BaseModel):
     """文章视图对象"""
-    
+
     id: int
     task_id: str = Field(..., alias="taskId")
     user_id: int = Field(..., alias="userId")
@@ -61,7 +61,7 @@ class ArticleVO(BaseModel):
     create_time: str = Field(..., alias="createTime")
     completed_time: Optional[str] = Field(None, alias="completedTime")
     update_time: str = Field(..., alias="updateTime")
-    
+
     class Config:
         populate_by_name = True
 
@@ -69,17 +69,17 @@ class ArticleVO(BaseModel):
 # ArticleState 内部类定义
 class TitleResult(BaseModel):
     """标题结果"""
-    
+
     main_title: str = Field(..., alias="mainTitle")
     sub_title: str = Field(..., alias="subTitle")
-    
+
     class Config:
         populate_by_name = True
 
 
 class OutlineSection(BaseModel):
     """大纲章节"""
-    
+
     section: int
     title: str
     points: List[str]
@@ -87,13 +87,13 @@ class OutlineSection(BaseModel):
 
 class OutlineResult(BaseModel):
     """大纲结果"""
-    
+
     sections: List[OutlineSection]
 
 
 class ImageRequirement(BaseModel):
-    """配图需求（第 5 期：新增 imageSource、prompt、placeholderId）"""
-    
+    """配图需求（新增 imageSource、prompt、placeholderId）"""
+
     position: int
     type: str
     section_title: str = Field(..., alias="sectionTitle")
@@ -101,14 +101,14 @@ class ImageRequirement(BaseModel):
     image_source: str = Field(..., alias="imageSource", description="图片来源")
     prompt: str = Field(default="", description="AI 生图提示词")
     placeholder_id: str = Field(..., alias="placeholderId", description="占位符ID")
-    
+
     class Config:
         populate_by_name = True
 
 
 class ImageResult(BaseModel):
-    """配图结果（第 5 期：新增 placeholderId）"""
-    
+    """配图结果（新增 placeholderId）"""
+
     position: int
     url: str
     method: str
@@ -116,32 +116,32 @@ class ImageResult(BaseModel):
     section_title: str = Field(..., alias="sectionTitle")
     description: str
     placeholder_id: str = Field(..., alias="placeholderId", description="占位符ID")
-    
+
     class Config:
         populate_by_name = True
 
 
 class Agent4Result(BaseModel):
-    """智能体4返回结果（第 5 期：占位符方案）"""
-    
+    """智能体4返回结果（占位符方案）"""
+
     content_with_placeholders: str = Field(..., alias="contentWithPlaceholders")
     image_requirements: List[ImageRequirement] = Field(..., alias="imageRequirements")
-    
+
     class Config:
         populate_by_name = True
 
 
 class ArticleState:
     """文章生成状态（智能体间共享的状态对象）"""
-    
+
     def __init__(self):
         self.task_id: Optional[str] = None
         self.topic: Optional[str] = None
         self.user_description: Optional[str] = None
-        self.style: Optional[str] = None  # 第 5 期新增
+        self.style: Optional[str] = None
         self.phase: Optional[str] = None
         self.title_options: Optional[List[TitleOption]] = None
-        self.enabled_image_methods: Optional[List[str]] = None  # 第 5 期新增
+        self.enabled_image_methods: Optional[List[str]] = None
         self.title: Optional[TitleResult] = None
         self.outline: Optional[OutlineResult] = None
         self.content: Optional[str] = None

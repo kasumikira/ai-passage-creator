@@ -2,21 +2,21 @@
 
 <div align="center">
 
-**AI 爆款文章创作器**
+**AI 爆款文章创作器（Python 版）**
 
-基于多智能体协作，自动完成从选题、大纲、正文到配图的全流程图文创作
+基于 FastAPI + Vue 3 的多智能体图文创作平台，自动完成从选题、大纲、正文到配图的全流程创作
 
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.9-6DB33F?style=flat-square&logo=springboot&logoColor=white)
-![Spring AI Alibaba](https://img.shields.io/badge/Spring%20AI%20Alibaba-1.1.0-FF6A00?style=flat-square&logo=spring&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)
-![JDK](https://img.shields.io/badge/JDK-21+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-7.0-646CFF?style=flat-square&logo=vite&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 
 </div>
 
 ## 🏗 项目简介
 
-AI 爆款文章创作器是一个基于 **Spring AI Alibaba** 构建的智能图文创作平台，通过 **5 个智能体协作** 完成从选题到图文文章的全自动创作，每个阶段都支持用户介入，实现人机协作的创作体验。
+AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文创作平台，通过 **5 个智能体协作** 完成从选题到图文文章的全自动创作，每个阶段都支持用户介入，实现人机协作的创作体验。
 
 ```
 阶段1: 选题 → 生成 3-5 个标题方案 → 用户选择
@@ -24,16 +24,17 @@ AI 爆款文章创作器是一个基于 **Spring AI Alibaba** 构建的智能图
 阶段3: 大纲 → 生成正文 → 分析配图需求 → 生成配图 → 图文合成
 ```
 
+> 本项目为「编程导航」AI 爆款文章创作器实战课程的 Python 重写版：后端由 Spring Boot 重写为 FastAPI，功能与原版对齐，已移除 VIP 会员与支付体系，所有创作功能对所有用户开放。
+
 ## 🎯 核心价值
 
 | 特性 | 说明 | 价值 |
 |------|------|------|
-| 🤖 多智能体协作 | 5 个 Agent 分工协作，StateGraph 编排 | 专业分工，质量更高 |
+| 🤖 多智能体协作 | 5 个 Agent 分工协作，统一编排 | 专业分工，质量更高 |
 | 🎨 多元配图 | 6 种配图策略 + 自动降级 | 图文并茂，永不中断 |
 | 📡 实时流式输出 | SSE 推送大纲/正文创作过程 | 所见即所得 |
 | 🧑‍💻 人机协作 | 三阶段创作，每步可介入 | 创作可控 |
-| 💎 VIP 会员体系 | Stripe 支付 + 配额管理 | 商业化就绪 |
-| 🐳 Docker 一键部署 | docker compose up 即可运行 | 5 分钟上手 |
+| ⚡ 异步高性能 | FastAPI 全异步栈 + Redis 缓存 | 响应迅速 |
 
 ## ✨ 功能特性
 
@@ -45,29 +46,29 @@ AI 爆款文章创作器是一个基于 **Spring AI Alibaba** 构建的智能图
 | Agent 2 | 大纲生成 | 根据标题生成文章大纲（流式输出） |
 | Agent 3 | 正文生成 | 根据大纲生成 Markdown 正文（流式输出） |
 | Agent 4 | 配图分析 | 分析正文内容，生成配图需求 |
-| Agent 5 | 配图生成 | 获取图片并上传到 COS |
-| 合成 | 合并图文 | 将配图插入正文生成完整图文 |
+| Agent 5 | 配图生成 | 按策略并行获取图片并上传到 COS |
+| 合成 | 合并图文 | 将配图按占位符插入正文生成完整图文 |
 
 ### 配图方式（策略模式）
 
-系统采用策略模式实现多种配图方式，支持灵活扩展：
+系统采用策略模式实现多种配图方式，支持灵活扩展（所有用户可用）：
 
-| 方式 | 说明 | 数据来源 | 权限 |
-|------|------|---------|------|
-| Pexels | 高质量图库检索 | 关键词检索 | 全部用户 |
-| Mermaid | 流程图/架构图生成 | AI Prompt 生成 | 全部用户 |
-| Iconify | 图标库检索 | 关键词检索 | 全部用户 |
-| 表情包 | Bing 图片搜索 | 关键词检索 | 全部用户 |
-| Nano Banana | Gemini AI 生图 | AI Prompt 生成 | VIP |
-| SVG Diagram | AI 概念示意图 | AI Prompt 生成 | VIP |
-| Picsum | 随机图片 | 降级方案 | 自动触发 |
+| 方式 | 说明 | 数据来源 |
+|------|------|---------|
+| Pexels | 高质量图库检索 | 关键词检索 |
+| Mermaid | 流程图/架构图生成 | AI Prompt 生成 |
+| Iconify | 图标库检索 | 关键词检索 |
+| 表情包 | Bing 图片搜索 | 关键词检索 |
+| Nano Banana | Gemini AI 生图 | AI Prompt 生成 |
+| SVG Diagram | AI 概念示意图 | AI Prompt 生成 |
+| Picsum | 随机图片 | 降级方案（自动触发） |
 
-> 当主配图方式失败时，系统会自动降级到 Picsum 随机图片，确保文章生成不中断。
+> 当配图方式失败时，系统会自动降级到 Picsum 随机图片，确保文章生成不中断。
 
 ### 文章风格
 
 - 🔬 科技风格 - 专业严谨
-- 💝 情感风格 - 温暖感人  
+- 💝 情感风格 - 温暖感人
 - 📚 教育风格 - 通俗易懂
 - 😄 轻松幽默 - 诙谐有趣
 
@@ -92,9 +93,8 @@ AI 爆款文章创作器是一个基于 **Spring AI Alibaba** 构建的智能图
 
 - ✅ 文章管理（列表、详情、删除）
 - ✅ Markdown 导出
-- ✅ VIP 会员体系（Stripe 支付）
-- ✅ 智能体执行日志追踪（AOP 自动记录）
-- ✅ 管理后台统计分析
+- ✅ 智能体执行日志追踪与耗时统计
+- ✅ 管理后台（用户管理、数据统计分析）
 
 ## 🛠 技术栈
 
@@ -102,17 +102,16 @@ AI 爆款文章创作器是一个基于 **Spring AI Alibaba** 构建的智能图
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
-| Spring Boot | 3.5.9 | Web 框架 |
-| Spring AI Alibaba | 1.1.0 | 多智能体编排框架 |
-| DashScope | - | 通义千问大模型 |
-| MyBatis-Flex | 1.11.1 | ORM 框架 |
-| MySQL | 8.0 | 数据存储 |
-| Spring Data Redis | - | Redis 客户端 |
-| Redisson | 3.50.0 | 分布式锁 |
-| Stripe | 31.2.0 | 支付集成 |
-| Knife4j | 4.4.0 | 接口文档 |
-| 腾讯云 COS SDK | 5.6.228 | 对象存储 |
-| Google Gen AI SDK | 1.35.0 | Gemini AI 生图 |
+| FastAPI | 0.115 | Web 框架 |
+| Uvicorn | 0.32 | ASGI 服务器 |
+| SQLAlchemy | 2.0 | ORM / 查询构建 |
+| databases | 0.9 | 异步数据库访问 |
+| PyMySQL | 1.1 | MySQL/MariaDB 驱动 |
+| MariaDB / MySQL | 10.x / 8.0 | 数据存储 |
+| Redis | 7.x | Session 与统计缓存 |
+| OpenAI SDK | 1.58 | 调用 DashScope（通义千问）兼容接口 |
+| Google Gen AI SDK | 1.35 | Gemini AI 生图（Nano Banana） |
+| 腾讯云 COS SDK | 1.9 | 对象存储（配图上传） |
 
 ### 前端
 
@@ -126,56 +125,55 @@ AI 爆款文章创作器是一个基于 **Spring AI Alibaba** 构建的智能图
 | Vue Router | 4.5 | 路由管理 |
 | ECharts | 6.0 | 数据可视化 |
 | Axios | 1.11 | HTTP 客户端 |
+| marked | 17 | Markdown 渲染 |
 
 ## 🚀 快速开始
 
 ### 环境要求
 
-- JDK 21+
+- Python 3.10+（推荐使用 [uv](https://docs.astral.sh/uv/) 管理环境）
 - Node.js 18+
-- MySQL 8.0+
+- MariaDB 10.x（或 MySQL 8.0）
 - Redis 7.x
 
-### 1. 数据库初始化
+### 1. 初始化数据库（Windows）
+
+运行根目录的 [初始化数据库.bat](初始化数据库.bat)，脚本会：
+
+1. 启动 MariaDB 容器（端口 3306，root 密码 `1234`，数据目录 `mariadb-data/`）
+2. 启动 Redis 容器（端口 6379，密码 `1234`，数据目录 `redis-data/`）
+3. 执行 `tools/main.exe`，将 [tools/init_database.sql](tools/init_database.sql) 应用到数据库（建库、建表、写入测试账号）
+
+也可以手动执行 SQL：
 
 ```bash
-mysql -uroot -p < sql/create_table.sql
+mysql -uroot -p1234 < tools/init_database.sql
 ```
 
-### 2. 配置 API Key
+### 2. 配置环境变量
 
 ```bash
-cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
+cp .env.example .env
 ```
 
-编辑 `application-local.yml`：
+编辑 `.env`，填写必需的 API Key：
 
-```yaml
-spring:
-  ai:
-    alibaba:
-      dashscope:
-        api-key: your-dashscope-api-key  # 必填
-
-pexels:
-  api-key: your-pexels-api-key  # 必填
-
-# 可选配置
-stripe:
-  api-key: sk_test_xxx  # 支付功能
-  
-tencent:
-  cos:
-    secret-id: xxx  # 图片上传
+```dotenv
+DASHSCOPE_API_KEY=your-dashscope-api-key  # 必填，通义千问
+PEXELS_API_KEY=your-pexels-api-key        # 必填，Pexels 图库
 ```
+
+其余配置（COS、Gemini 生图、Mermaid 等）按需填写，见 [.env.example](.env.example) 中的注释。
 
 ### 3. 启动后端
 
 ```bash
-mvn spring-boot:run
+uv sync                 # 安装依赖（首次）
+uv run uvicorn app.main:app --reload
 ```
 
-接口文档：http://localhost:8567/api/doc.html
+- 后端地址：http://localhost:8567
+- 接口文档（Swagger UI）：http://localhost:8567/docs
 
 ### 4. 启动前端
 
@@ -185,146 +183,67 @@ npm install
 npm run dev
 ```
 
-前端页面：http://localhost:5173
+前端页面：http://localhost:5173 （已配置代理，`/api` 请求转发到 `localhost:8567`）
 
-## 🐳 Docker 一键部署（推荐）
-
-### 前置条件
-
-- Docker 20.10+
-- Docker Compose v2+
-
-### 快速启动
-
-```bash
-# 1. 复制环境变量配置文件
-cp .env.example .env
-
-# 2. 编辑 .env 文件，填写必需的 API Key
-# 必须配置：DASHSCOPE_API_KEY 和 PEXELS_API_KEY
-vim .env
-
-# 3. 一键启动所有服务
-docker compose up -d --build
-
-# 或使用启动脚本（自动检查环境）
-./start.sh
-```
-
-### 国内网络使用（镜像加速）
-
-如果遇到 Docker 镜像拉取失败，使用国内镜像版本：
-
-```bash
-docker compose -f docker-compose.china.yml up -d --build
-```
-
-### 服务端口
-
-| 服务 | 端口 | 说明 |
-|------|------|------|
-| 前端 | 80 | 访问地址：http://localhost |
-| 后端 | 8123 | API 接口：http://localhost:8123/api |
-| 接口文档 | 8123 | http://localhost:8123/api/doc.html |
-| MySQL | 不暴露 | 仅内部网络访问（可选暴露到 13306） |
-| Redis | 不暴露 | 仅内部网络访问（可选暴露到 16379） |
-
-> **安全说明**：MySQL 和 Redis 默认不暴露端口到宿主机，仅通过 Docker 内部网络访问。如需从宿主机连接数据库进行调试，可在 `docker-compose.yml` 中取消相应 `ports` 注释。
-
-### 常用命令
-
-```bash
-# 查看服务状态
-docker compose ps
-
-# 查看服务日志
-docker compose logs -f backend    # 后端日志
-docker compose logs -f frontend   # 前端日志
-docker compose logs -f mysql      # 数据库日志
-
-# 重启单个服务
-docker compose restart backend
-
-# 停止所有服务
-docker compose down
-
-# 停止并删除数据卷（清空数据）
-docker compose down -v
-```
-
-### 环境变量说明
+## 🔧 环境变量说明
 
 | 变量名 | 必需 | 默认值 | 说明 |
 |--------|------|--------|------|
-| DASHSCOPE_API_KEY | ✅ | - | 通义千问 API Key |
-| PEXELS_API_KEY | ✅ | - | Pexels 图片 API Key |
-| MYSQL_ROOT_PASSWORD | - | 123456 | MySQL root 密码 |
-| MYSQL_DATABASE | - | ai_passage_creator | 数据库名 |
-| BACKEND_PORT | - | 8123 | 后端端口 |
-| FRONTEND_PORT | - | 80 | 前端端口 |
-| NANO_BANANA_API_KEY | - | - | AI 生图（VIP功能） |
-| STRIPE_API_KEY | - | - | Stripe 支付（VIP功能） |
+| DASHSCOPE_API_KEY | ✅ | dummy | 通义千问 API Key |
+| PEXELS_API_KEY | ✅ | dummy | Pexels 图片 API Key |
+| DASHSCOPE_MODEL | - | qwen-plus | 大模型名称 |
+| DB_HOST / DB_PORT | - | 127.0.0.1 / 3306 | 数据库地址 |
+| DB_NAME | - | ai_passage_creator | 数据库名 |
+| DB_USER / DB_PASSWORD | - | root / 1234 | 数据库账号 |
+| REDIS_HOST / REDIS_PORT | - | 127.0.0.1 / 6379 | Redis 地址 |
+| REDIS_PASSWORD | - | 1234 | Redis 密码 |
+| SERVER_PORT | - | 8567 | 后端端口 |
+| TENCENT_COS_SECRET_ID / _SECRET_KEY | - | dummy | 腾讯云 COS（配图上传） |
+| NANO_BANANA_API_KEY | - | dummy | Gemini AI 生图 |
 
-详见 `.env.example` 文件获取完整配置说明。
+完整列表见 [.env.example](.env.example)。
 
 ## 📁 项目结构
 
 ```
-├── src/main/java/com/yupi/template/
-│   ├── agent/                       # 智能体模块
-│   │   ├── agents/                  # 各智能体实现
-│   │   │   ├── TitleGeneratorAgent.java
-│   │   │   ├── OutlineGeneratorAgent.java
-│   │   │   ├── ContentGeneratorAgent.java
-│   │   │   ├── ImageAnalyzerAgent.java
-│   │   │   └── ContentMergerAgent.java
-│   │   ├── parallel/                # 并行配图生成
-│   │   │   └── ParallelImageGenerator.java
-│   │   ├── config/                  # 智能体配置
-│   │   ├── context/                 # 流式处理上下文
-│   │   ├── tools/                   # 智能体工具
-│   │   └── ArticleAgentOrchestrator.java
-│   ├── annotation/                  # 自定义注解（@AgentExecution）
-│   ├── aop/                         # AOP 切面（执行日志记录）
-│   ├── config/                      # 配置类（COS、Pexels、Mermaid 等）
-│   ├── constant/                    # 常量（PromptConstant、ArticleConstant）
-│   ├── controller/                  # 控制器
-│   ├── exception/                   # 异常处理
-│   ├── manager/                     # 管理器（SseEmitterManager）
-│   ├── mapper/                      # MyBatis Mapper
-│   ├── model/
-│   │   ├── dto/                     # 数据传输对象
-│   │   │   ├── article/             # ArticleState、ArticleCreateRequest 等
-│   │   │   └── image/               # ImageData、ImageRequest
-│   │   ├── entity/                  # 实体类
-│   │   ├── enums/                   # 枚举（ImageMethodEnum、ArticleStyleEnum）
-│   │   └── vo/                      # 视图对象
-│   ├── service/                     # 业务服务
-│   │   ├── impl/                    # 服务实现
-│   │   ├── ArticleAgentService.java # 智能体编排
-│   │   ├── ImageServiceStrategy.java# 配图策略选择器
-│   │   ├── CosService.java          # COS 上传
-│   │   ├── PexelsService.java       # Pexels 图库
-│   │   ├── NanoBananaService.java   # Gemini AI 生图
-│   │   ├── MermaidService.java      # Mermaid 流程图
-│   │   ├── IconifyService.java      # Iconify 图标
-│   │   ├── EmojiPackService.java    # 表情包搜索
-│   │   └── SvgDiagramService.java   # SVG 示意图
-│   └── utils/                       # 工具类
-├── frontend/                        # 前端项目
+├── app/                               # FastAPI 后端
+│   ├── main.py                        # 应用入口（路由注册、生命周期、异常处理）
+│   ├── config.py                      # 配置管理（pydantic-settings，读取 .env）
+│   ├── database.py / deps.py          # 数据库连接、登录态依赖
+│   ├── agent/                         # 智能体模块
+│   │   ├── agents/                    # 5 个智能体实现（标题/大纲/正文/配图分析/图文合成）
+│   │   ├── orchestrator.py            # 三阶段编排器
+│   │   ├── parallel/                  # 并行配图生成
+│   │   └── context/                   # SSE 流式处理上下文
+│   ├── constants/                     # 常量（Prompt、文章、用户）
+│   ├── managers/                      # SseEmitterManager
+│   ├── models/                        # SQLAlchemy 模型与枚举
+│   ├── routers/                       # 路由（health/user/article/statistics）
+│   ├── schemas/                       # Pydantic 请求/响应模型
+│   ├── services/                      # 业务服务
+│   │   ├── article_agent_service.py   # 智能体编排与 Prompt 构建
+│   │   ├── article_service.py         # 文章状态流转
+│   │   ├── article_async_service.py   # 异步阶段任务
+│   │   ├── image_service_strategy.py  # 配图策略选择器
+│   │   ├── pexels / mermaid / iconify / emoji_pack / nano_banana / svg_diagram_service.py
+│   │   ├── cos_service.py             # COS 上传
+│   │   ├── user_service.py / statistics_service.py
+│   │   └── agent_log_service.py       # 智能体执行日志
+│   └── utils/                         # 密码加密、Redis Session
+├── frontend/                          # Vue 3 前端
 │   ├── src/
-│   │   ├── pages/                   # 页面组件
-│   │   ├── components/              # 公共组件
-│   │   ├── api/                     # API 接口
-│   │   └── stores/                  # 状态管理
+│   │   ├── pages/                     # 页面（创作、文章、用户、管理后台）
+│   │   ├── components/                # 公共组件
+│   │   ├── api/                       # API 接口与 TS 类型
+│   │   ├── stores/                    # Pinia 状态管理
+│   │   └── utils/                     # SSE、权限、Markdown 工具
 │   └── package.json
-├── sql/                             # 数据库脚本
-│   ├── create_table.sql             # 建表语句
-│   ├── init_database.sql            # 初始化数据
-│   └── ...                          # 增量更新脚本
-├── docker-compose.yml               # Docker 编排
-├── start.sh                         # 启动脚本
-└── pom.xml                          # Maven 配置
+├── tools/
+│   ├── init_database.sql              # 建库建表 + 测试数据
+│   └── main.exe                       # 数据库初始化工具（执行上述 SQL）
+├── 初始化数据库.bat                     # Windows 一键启动 MariaDB/Redis 并初始化
+├── pyproject.toml / uv.lock           # Python 依赖（uv 管理）
+└── .env.example                       # 环境变量模板
 ```
 
 ## 🗄 数据库设计
@@ -333,30 +252,28 @@ docker compose down -v
 
 | 表名 | 说明 |
 |------|------|
-| user | 用户表（含 VIP 时间、配额） |
-| article | 文章表（含状态、阶段、配图方式限制） |
-| agent_log | 智能体执行日志 |
-| payment_record | 支付记录 |
+| user | 用户表（角色：user/admin） |
+| article | 文章表（状态、阶段、配图方式、图文内容） |
+| agent_log | 智能体执行日志（Prompt、输入输出、耗时） |
 
 ### 文章表关键字段
 
 ```sql
 taskId               -- 任务ID（UUID）
-phase                -- 当前阶段：TITLE_SELECTION/OUTLINE_EDITING/CONTENT_GENERATION/COMPLETED
+phase                -- 当前阶段：PENDING/TITLE_GENERATING/TITLE_SELECTING/OUTLINE_GENERATING/OUTLINE_EDITING/CONTENT_GENERATING
 style                -- 文章风格
 titleOptions         -- 标题方案列表（JSON）
-enabledImageMethods  -- 允许的配图方式（JSON 数组）
+enabledImageMethods  -- 允许的配图方式（JSON 数组，空表示全部可用）
 ```
 
 ## 🔑 API Key 获取
 
 | 服务 | 获取地址 | 说明 |
 |------|---------|------|
-| 通义千问 | https://bailian.console.aliyun.com | 必需 |
-| Pexels | https://www.pexels.com/api/ | 必需 |
-| Stripe | https://dashboard.stripe.com | 支付功能 |
-| 腾讯云 COS | https://console.cloud.tencent.com | 图片上传 |
-| Nano Banana | - | Gemini AI 生图（VIP 功能） |
+| 通义千问 DashScope | https://bailian.console.aliyun.com | 必需，驱动所有文本智能体 |
+| Pexels | https://www.pexels.com/api/ | 必需，默认图库检索 |
+| 腾讯云 COS | https://console.cloud.tencent.com | 配图上传 |
+| Gemini（Nano Banana） | Google AI Studio | AI 生图 |
 
 ## 🧪 测试账号
 
@@ -370,34 +287,30 @@ enabledImageMethods  -- 允许的配图方式（JSON 数组）
 
 ### 多智能体编排
 
-采用 Spring AI Alibaba 的 StateGraph 实现智能体编排：
+`ArticleAgentOrchestrator` 将 5 个智能体组织为三个阶段，阶段间通过用户确认衔接：
 
-```java
-StateGraph graph = new StateGraph(keyStrategyFactory)
-    .addNode("content_generator", node_async(contentGeneratorAgent))
-    .addNode("image_analyzer", node_async(imageAnalyzerAgent))
-    .addNode("parallel_image_generator", node_async(parallelImageGenerator))
-    .addNode("content_merger", node_async(contentMergerAgent))
-    .addEdge(START, "content_generator")
-    .addEdge("content_generator", "image_analyzer")
-    .addEdge("image_analyzer", "parallel_image_generator")
-    .addEdge("parallel_image_generator", "content_merger")
-    .addEdge("content_merger", END);
+```python
+async def execute_phase3(self, service, state, stream_handler):
+    stream_context = StreamHandlerContext(stream_handler)
+    await self.content_agent.run(service, state, stream_context.emit)   # 正文生成
+    await self.image_analyzer_agent.run(service, state)                 # 配图需求分析
+    await service.agent5_generate_images(state, stream_context.emit)    # 并行配图
+    self.content_merger_agent.run(service, state)                       # 图文合成
 ```
 
 ### 配图策略模式
 
-支持 6 种配图方式，通过策略模式实现灵活扩展：
+每种配图方式实现统一的 `ImageSearchService` 接口，由 `ImageServiceStrategy` 注册并调度：
 
-```java
-public enum ImageMethodEnum {
-    PEXELS("PEXELS", "Pexels 图库", false, false),
-    NANO_BANANA("NANO_BANANA", "AI 生图", true, false),
-    MERMAID("MERMAID", "流程图", true, false),
-    ICONIFY("ICONIFY", "图标库", false, false),
-    EMOJI_PACK("EMOJI_PACK", "表情包", false, false),
-    SVG_DIAGRAM("SVG_DIAGRAM", "示意图", true, false);
-}
+```python
+class ImageMethodEnum(str, Enum):
+    PEXELS = "PEXELS"
+    NANO_BANANA = "NANO_BANANA"
+    MERMAID = "MERMAID"
+    ICONIFY = "ICONIFY"
+    EMOJI_PACK = "EMOJI_PACK"
+    SVG_DIAGRAM = "SVG_DIAGRAM"
+    PICSUM = "PICSUM"       # 降级方案
 ```
 
 ### 流式输出
@@ -413,38 +326,26 @@ public enum ImageMethodEnum {
 
 ### 添加新的配图方式
 
-1. 在 `ImageMethodEnum` 添加枚举值：
+1. 在 `app/models/enums.py` 的 `ImageMethodEnum` 添加枚举值
+2. 在 `app/services/` 下实现 `ImageSearchService` 接口：
 
-```java
-NEW_METHOD("NEW_METHOD", "新方式描述", isAiGenerated, isFallback)
+```python
+class NewMethodService(ImageSearchService):
+    def get_method(self) -> ImageMethodEnum:
+        return ImageMethodEnum.NEW_METHOD
+
+    async def get_image_data(self, request: ImageRequest) -> Optional[ImageData]:
+        ...
 ```
 
-2. 实现 `ImageSearchService` 接口：
-
-```java
-@Service("NEW_METHOD")
-public class NewMethodService implements ImageSearchService {
-    @Override
-    public ImageData search(ImageRequest request) {
-        // 实现图片获取逻辑
-    }
-}
-```
-
-3. 添加对应的配置类（如需要 API Key）
-4. 策略选择器会自动注册新服务
+3. 在 `ImageServiceStrategy._register_services()` 中注册服务
+4. （可选）在 `app/config.py` 添加配置项、在 `.env.example` 补充说明
 
 ### 添加新的文章风格
 
 1. 在 `ArticleStyleEnum` 添加枚举值
-2. 在 `PromptConstant` 添加对应的 Prompt 附加内容
-3. 在 `ArticleAgentService.getStylePrompt()` 添加 case
-
-## 📖 相关文档
-
-- [VIP 功能说明](VIP_FEATURES.md) - VIP 会员权益介绍
-- [Stripe 支付配置](STRIPE_SETUP.md) - 支付功能配置指南
-- [项目架构概览](PROJECT_OVERVIEW.md) - 详细技术架构文档
+2. 在 `app/constants/prompt.py` 添加对应的 Prompt 附加内容
+3. 在 `ArticleAgentService._get_style_prompt()` 添加映射
 
 ## 👨‍💻 作者
 

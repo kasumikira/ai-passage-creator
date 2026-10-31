@@ -56,8 +56,8 @@ class UserService:
         
         # 插入用户
         query = """
-            INSERT INTO user (userAccount, userPassword, userName, userRole, quota)
-            VALUES (:userAccount, :userPassword, :userName, :userRole, :quota)
+            INSERT INTO user (userAccount, userPassword, userName, userRole)
+            VALUES (:userAccount, :userPassword, :userName, :userRole)
         """
         user_id = await self.db.execute(
             query=query,
@@ -66,7 +66,6 @@ class UserService:
                 "userPassword": encrypted_password,
                 "userName": f"用户{request.user_account}",
                 "userRole": UserConstant.DEFAULT_ROLE,
-                "quota": UserConstant.DEFAULT_QUOTA,
             }
         )
         
@@ -111,8 +110,6 @@ class UserService:
             userAvatar=user_dict["userAvatar"],
             userProfile=user_dict["userProfile"],
             userRole=user_dict["userRole"],
-            quota=user_dict.get("quota"),
-            vipTime=user_dict["vipTime"].isoformat() if user_dict.get("vipTime") else None,
             createTime=user_dict["createTime"].isoformat(),
             updateTime=user_dict["updateTime"].isoformat()
         )
@@ -134,8 +131,6 @@ class UserService:
             userAvatar=user_dict["userAvatar"],
             userProfile=user_dict["userProfile"],
             userRole=user_dict["userRole"],
-            quota=user_dict.get("quota"),
-            vipTime=user_dict["vipTime"].isoformat() if user_dict.get("vipTime") else None,
             createTime=user_dict["createTime"].isoformat()
         )
     
@@ -190,8 +185,6 @@ class UserService:
                     userAvatar=user_dict["userAvatar"],
                     userProfile=user_dict["userProfile"],
                     userRole=user_dict["userRole"],
-                    quota=user_dict.get("quota"),
-                    vipTime=user_dict["vipTime"].isoformat() if user_dict.get("vipTime") else None,
                     createTime=user_dict["createTime"].isoformat()
                 )
             )
@@ -212,8 +205,8 @@ class UserService:
         
         # 插入用户
         query = """
-            INSERT INTO user (userAccount, userPassword, userName, userAvatar, userProfile, userRole, quota)
-            VALUES (:userAccount, :userPassword, :userName, :userAvatar, :userProfile, :userRole, :quota)
+            INSERT INTO user (userAccount, userPassword, userName, userAvatar, userProfile, userRole)
+            VALUES (:userAccount, :userPassword, :userName, :userAvatar, :userProfile, :userRole)
         """
         user_id = await self.db.execute(
             query=query,
@@ -224,7 +217,6 @@ class UserService:
                 "userAvatar": request.user_avatar,
                 "userProfile": request.user_profile,
                 "userRole": request.user_role,
-                "quota": UserConstant.DEFAULT_QUOTA,
             }
         )
         

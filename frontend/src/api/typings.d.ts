@@ -102,12 +102,6 @@ declare namespace API {
     message?: string
   }
 
-  type BaseResponseListPaymentRecord = {
-    code?: number
-    data?: PaymentRecord[]
-    message?: string
-  }
-
   type BaseResponseLoginUserVO = {
     code?: number
     data?: LoginUserVO
@@ -202,8 +196,6 @@ declare namespace API {
     userAvatar?: string
     userProfile?: string
     userRole?: string
-    quota?: number
-    vipTime?: string
     createTime?: string
     updateTime?: string
   }
@@ -238,26 +230,6 @@ declare namespace API {
     optimizeCountQuery?: boolean
   }
 
-  type PaymentRecord = {
-    id?: number
-    userId?: number
-    stripeSessionId?: string
-    stripePaymentIntentId?: string
-    amount?: number
-    currency?: string
-    status?: string
-    productType?: string
-    description?: string
-    refundTime?: string
-    refundReason?: string
-    createTime?: string
-    updateTime?: string
-  }
-
-  type refundParams = {
-    reason?: string
-  }
-
   type SseEmitter = {
     timeout?: number
   }
@@ -271,8 +243,6 @@ declare namespace API {
     avgDurationMs?: number
     activeUserCount?: number
     totalUserCount?: number
-    vipUserCount?: number
-    quotaUsed?: number
   }
 
   type TitleOption = {
@@ -288,8 +258,6 @@ declare namespace API {
     userAvatar?: string
     userProfile?: string
     userRole?: string
-    quota?: number
-    vipTime?: string
     editTime?: string
     createTime?: string
     updateTime?: string

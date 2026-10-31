@@ -3,7 +3,7 @@
 
 class PromptConstant:
     """Prompt 模板常量"""
-    
+
     # 智能体1：生成标题方案
     AGENT1_TITLE_PROMPT = """你是一位爆款文章标题专家,擅长创作吸引人的标题。
 
@@ -34,7 +34,7 @@ class PromptConstant:
   }}
 ]
 """
-    
+
     # 智能体2：生成大纲
     AGENT2_OUTLINE_PROMPT = """你是一位专业的文章策划师,擅长设计文章结构。
 
@@ -61,13 +61,13 @@ class PromptConstant:
 }}
 """
 
-    # 用户补充描述段落（第 6 期新增）
+    # 用户补充描述段落
     AGENT2_DESCRIPTION_SECTION = """
 
 用户补充要求：{userDescription}
 请在大纲中充分体现用户的补充要求。
 """
-    
+
     # 智能体3：生成正文
     AGENT3_CONTENT_PROMPT = """你是一位资深的内容创作者,擅长撰写优质文章。
 
@@ -86,8 +86,8 @@ class PromptConstant:
 
 请直接返回 Markdown 格式的正文内容,不要有其他内容。
 """
-    
-    # 智能体4：分析配图需求（第 5 期：占位符方案）
+
+    # 智能体4：分析配图需求（占位符方案）
     AGENT4_IMAGE_REQUIREMENTS_PROMPT = """你是一位专业的新媒体编辑,擅长为文章配图。
 
 根据以下文章内容,分析配图需求,并在正文中插入图片占位符:
@@ -183,10 +183,10 @@ class PromptConstant:
 }}
 """
 
-    # 第 9 期：并行配图执行说明（用于日志与编排标识）
+    # 并行配图执行说明（用于日志与编排标识）
     AGENT5_IMAGE_EXECUTION_PROMPT = "并行执行配图生成，确保结果按 position 顺序回填。"
-    
-    # SVG 概念示意图生成 Prompt（第 5 期新增）
+
+    # SVG 概念示意图生成 Prompt
     SVG_DIAGRAM_GENERATION_PROMPT = """### 背景 ###
 你是一位资深的信息可视化设计师，擅长将抽象概念转化为直观易懂的 SVG 示意图。
 你的作品曾用于知名媒体和技术文档，风格简洁现代、逻辑清晰。
@@ -211,8 +211,8 @@ class PromptConstant:
 请直接输出完整的 SVG 代码，不要有其他任何内容（不要markdown代码块标记）。
 从 <?xml 开始，到 </svg> 结束。
 """
-    
-    # 科技风格 Prompt 附加（第 5 期新增）
+
+    # 科技风格 Prompt 附加
     STYLE_TECH_PROMPT = """
 
 **重要：请使用科技风格进行创作**
@@ -222,8 +222,8 @@ class PromptConstant:
 - 突出技术创新、发展趋势、解决方案
 - 可适当引用权威资料或专家观点
 """
-    
-    # 情感风格 Prompt 附加（第 5 期新增）
+
+    # 情感风格 Prompt 附加
     STYLE_EMOTIONAL_PROMPT = """
 
 **重要：请使用情感风格进行创作**
@@ -233,8 +233,8 @@ class PromptConstant:
 - 引发读者情感共鸣，传递正能量
 - 适当使用抒情语句，增加文章温度
 """
-    
-    # 教育风格 Prompt 附加（第 5 期新增）
+
+    # 教育风格 Prompt 附加
     STYLE_EDUCATIONAL_PROMPT = """
 
 **重要：请使用教育风格进行创作**
@@ -244,8 +244,8 @@ class PromptConstant:
 - 总结重点知识点，提供实用的学习建议
 - 鼓励思考，启发读者自主学习和探索
 """
-    
-    # 轻松幽默风格 Prompt 附加（第 5 期新增）
+
+    # 轻松幽默风格 Prompt 附加
     STYLE_HUMOROUS_PROMPT = """
 
 **重要：请使用轻松幽默风格进行创作**
@@ -256,7 +256,7 @@ class PromptConstant:
 - 可加入一些有趣的段子或梗，但不失专业性
 """
 
-    # AI 修改大纲 Prompt（第 6 期新增）
+    # AI 修改大纲 Prompt
     AI_MODIFY_OUTLINE_PROMPT = """你是一位专业的文章策划师,擅长根据用户反馈优化文章结构。
 
 当前文章信息：

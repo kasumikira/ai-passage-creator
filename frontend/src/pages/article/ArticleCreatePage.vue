@@ -82,34 +82,19 @@
                 </div>
                 <a-checkbox-group v-model:value="selectedImageMethods" class="methods-group">
                   <a-checkbox value="PEXELS">Pexels</a-checkbox>
-                  <a-tooltip :title="isVip ? '' : '仅限 VIP 会员'">
-                    <a-checkbox value="NANO_BANANA" :disabled="!isVip">
-                      Nano Banana
-                      <CrownOutlined v-if="!isVip" class="vip-icon" />
-                    </a-checkbox>
-                  </a-tooltip>
+                  <a-checkbox value="NANO_BANANA">Nano Banana</a-checkbox>
                   <a-checkbox value="MERMAID">Mermaid</a-checkbox>
                   <a-checkbox value="ICONIFY">Iconify</a-checkbox>
                   <a-checkbox value="EMOJI_PACK">表情包</a-checkbox>
-                  <a-tooltip :title="isVip ? '' : '仅限 VIP 会员'">
-                    <a-checkbox value="SVG_DIAGRAM" :disabled="!isVip">
-                      SVG
-                      <CrownOutlined v-if="!isVip" class="vip-icon" />
-                    </a-checkbox>
-                  </a-tooltip>
+                  <a-checkbox value="SVG_DIAGRAM">SVG</a-checkbox>
                 </a-checkbox-group>
-                <div v-if="!isVip" class="vip-notice">
-                  <CrownOutlined />
-                  <span>AI 生图和 SVG 图表为 VIP 专属功能，</span>
-                  <RouterLink to="/vip" class="upgrade-link">立即升级</RouterLink>
-                </div>
               </div>
 
               <a-button
                 type="primary"
                 size="large"
                 :loading="isCreating"
-                :disabled="!topic.trim() || !hasQuota"
+                :disabled="!topic.trim()"
                 @click="startCreate"
                 class="create-btn"
               >
@@ -118,10 +103,6 @@
                 </template>
                 开始创作
               </a-button>
-              <div v-if="!hasQuota" class="quota-warning">
-                <WarningOutlined />
-                <span>配额已用完，无法创建文章</span>
-              </div>
             </div>
           </div>
           </div>
@@ -258,36 +239,6 @@
 
       <!-- 右侧：辅助面板 -->
       <aside class="sidebar-right">
-        <!-- 配额信息 -->
-        <div v-if="currentPhase === 'INPUT'" class="panel-section quota-section">
-          <h4 class="panel-title">
-            <CrownOutlined />
-            创作配额
-          </h4>
-          <div v-if="isAdmin" class="quota-admin">
-            <span class="quota-badge admin">管理员</span>
-            <span class="quota-text">无限次</span>
-          </div>
-          <div v-else-if="isVip" class="quota-admin">
-            <span class="quota-badge vip">VIP 会员</span>
-            <span class="quota-text">无限次</span>
-          </div>
-          <div v-else class="quota-info">
-            <div class="quota-display">
-              <span class="quota-number" :class="{ 'low': quota <= 1, 'empty': quota === 0 }">{{ quota }}</span>
-              <span class="quota-unit">次</span>
-            </div>
-            <div class="quota-label">剩余可用</div>
-            <a-progress
-              :percent="(quota / 5) * 100"
-              :show-info="false"
-              :stroke-color="quota <= 1 ? '#ff4d4f' : '#22C55E'"
-              size="small"
-              class="quota-progress"
-            />
-          </div>
-        </div>
-
         <!-- 热门选题 -->
         <div v-if="currentPhase === 'INPUT'" class="panel-section">
           <h4 class="panel-title">
@@ -555,13 +506,10 @@ import {
   QuestionCircleOutlined,
   MessageOutlined,
   PictureOutlined,
-  WarningOutlined,
-  CrownOutlined,
   FileTextOutlined
 } from '@ant-design/icons-vue'
 import { createArticle, confirmTitle, confirmOutline } from '@/api/articleController'
 import { connectSSE, closeSSE, type SSEMessage } from '@/utils/sse'
-import { isAdmin as checkIsAdmin, isVip as checkIsVip, hasQuota as checkHasQuota } from '@/utils/permission'
 import { marked } from 'marked'
 import TitleSelectingStage from './components/TitleSelectingStage.vue'
 import OutlineEditingStage from './components/OutlineEditingStage.vue'
@@ -569,12 +517,6 @@ import OutlineEditingStage from './components/OutlineEditingStage.vue'
 const router = useRouter()
 const route = useRoute()
 const loginUserStore = useLoginUserStore()
-
-// 配额相关计算属性
-const isAdmin = computed(() => checkIsAdmin(loginUserStore.loginUser))
-const isVip = computed(() => checkIsVip(loginUserStore.loginUser))
-const quota = computed(() => loginUserStore.loginUser.quota ?? 0)
-const hasQuota = computed(() => checkHasQuota(loginUserStore.loginUser))
 
 // 智能体步骤（对应后端 6 个步骤）
 const agentSteps = [
@@ -716,11 +658,6 @@ const scrollToBottom = () => {
 const startCreate = async () => {
   if (!topic.value.trim()) {
     message.warning('请输入选题')
-    return
-  }
-
-  if (!hasQuota.value) {
-    message.error('配额不足，无法创建文章')
     return
   }
 
@@ -1233,20 +1170,6 @@ onBeforeUnmount(() => {
   }
 }
 
-.quota-warning {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 10px 16px;
-  background: rgba(255, 77, 79, 0.08);
-  border: 1px solid rgba(255, 77, 79, 0.2);
-  border-radius: var(--radius-md);
-  color: #ff4d4f;
-  font-size: 13px;
-}
-
 /* 文章风格选择 */
 .style-section {
   padding: 16px;
@@ -1334,39 +1257,6 @@ onBeforeUnmount(() => {
 .methods-group :deep(.ant-checkbox-wrapper-disabled) {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.vip-icon {
-  color: var(--color-primary);
-  font-size: 12px;
-  margin-left: 4px;
-}
-
-.vip-notice {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  padding: 10px 14px;
-  background: rgba(34, 197, 94, 0.08);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  color: var(--color-primary-dark);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-
-  .anticon {
-    color: var(--color-primary);
-  }
-
-  .upgrade-link {
-    color: var(--color-primary);
-    font-weight: 600;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
 }
 
 /* 创作进行中 */
@@ -1585,84 +1475,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
   color: var(--color-text);
   margin: 0 0 16px;
-}
-
-/* 配额信息样式 */
-.quota-section {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.02) 100%);
-  border-radius: var(--radius-lg);
-  padding: 16px !important;
-  margin: -8px -8px 12px -8px;
-}
-
-.quota-admin {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.quota-badge {
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 600;
-
-  &.admin {
-    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-    color: white;
-  }
-
-  &.vip {
-    background: var(--gradient-primary);
-    color: white;
-  }
-}
-
-.quota-text {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-}
-
-.quota-info {
-  text-align: center;
-}
-
-.quota-display {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 4px;
-}
-
-.quota-number {
-  font-size: 36px;
-  font-weight: 700;
-  color: var(--color-primary);
-  line-height: 1;
-
-  &.low {
-    color: #faad14;
-  }
-
-  &.empty {
-    color: #ff4d4f;
-  }
-}
-
-.quota-unit {
-  font-size: 14px;
-  color: var(--color-text-muted);
-}
-
-.quota-label {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  margin: 4px 0 12px;
-}
-
-.quota-progress {
-  max-width: 120px;
-  margin: 0 auto;
 }
 
 /* 热门选题 */

@@ -101,14 +101,6 @@
             </h3>
             <div ref="userChartRef" class="chart-container"></div>
           </a-card>
-
-          <a-card :bordered="false" class="chart-card">
-            <h3 class="chart-title">
-              <CrownOutlined />
-              配额使用情况
-            </h3>
-            <div ref="quotaChartRef" class="chart-container"></div>
-          </a-card>
         </div>
       </a-spin>
     </div>
@@ -126,7 +118,6 @@ import {
   LineChartOutlined,
   ThunderboltOutlined,
   TeamOutlined,
-  CrownOutlined,
   ReloadOutlined
 } from '@ant-design/icons-vue'
 import { getStatistics } from '@/api/statisticsController'
@@ -139,10 +130,8 @@ const stats = ref<API.StatisticsVO | null>(null)
 // ECharts 实例
 const trendChartRef = ref<HTMLElement>()
 const userChartRef = ref<HTMLElement>()
-const quotaChartRef = ref<HTMLElement>()
 let trendChart: echarts.ECharts | null = null
 let userChart: echarts.ECharts | null = null
-let quotaChart: echarts.ECharts | null = null
 
 // 加载数据
 const loadData = async () => {
@@ -155,7 +144,6 @@ const loadData = async () => {
     setTimeout(() => {
       renderTrendChart()
       renderUserChart()
-      renderQuotaChart()
     }, 100)
   } catch (error) {
     message.error((error as Error).message || '加载数据失败')
@@ -277,17 +265,15 @@ const renderUserChart = () => {
         },
         data: [
           {
-            value: stats.value.vipUserCount ?? 0,
-            name: 'VIP 会员',
-            itemStyle: { color: '#22C55E' }
-          },
-          {
             value: stats.value.activeUserCount ?? 0,
             name: '活跃用户',
             itemStyle: { color: '#3B82F6' }
           },
           {
-            value: (stats.value.totalUserCount ?? 0) - (stats.value.activeUserCount ?? 0) - (stats.value.vipUserCount ?? 0),
+            value: Math.max(
+              0,
+              (stats.value.totalUserCount ?? 0) - (stats.value.activeUserCount ?? 0)
+            ),
             name: '其他用户',
             itemStyle: { color: '#94A3B8' }
           }
@@ -297,57 +283,6 @@ const renderUserChart = () => {
   }
 
   userChart.setOption(option)
-}
-
-// 渲染配额使用图
-const renderQuotaChart = () => {
-  if (!quotaChartRef.value || !stats.value) return
-
-  if (!quotaChart) {
-    quotaChart = echarts.init(quotaChartRef.value)
-  }
-
-  const totalQuota = (stats.value.totalUserCount ?? 0) * 5
-  const usedQuota = stats.value.quotaUsed ?? 0
-  const remainingQuota = Math.max(0, totalQuota - usedQuota)
-
-  const option: EChartsOption = {
-    tooltip: {
-      trigger: 'item'
-    },
-    series: [
-      {
-        name: '配额统计',
-        type: 'pie',
-        radius: '70%',
-        center: ['50%', '50%'],
-        data: [
-          {
-            value: usedQuota,
-            name: '已使用',
-            itemStyle: { color: '#EF4444' }
-          },
-          {
-            value: remainingQuota,
-            name: '剩余',
-            itemStyle: { color: '#22C55E' }
-          }
-        ],
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
-          }
-        },
-        label: {
-          formatter: '{b}: {c}'
-        }
-      }
-    ]
-  }
-
-  quotaChart.setOption(option)
 }
 
 // 格式化耗时
@@ -360,7 +295,6 @@ const formatDuration = (ms: number) => {
 const handleResize = () => {
   trendChart?.resize()
   userChart?.resize()
-  quotaChart?.resize()
 }
 
 onMounted(() => {
@@ -372,7 +306,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   trendChart?.dispose()
   userChart?.dispose()
-  quotaChart?.dispose()
 })
 </script>
 

@@ -7,7 +7,6 @@ from typing import Optional
 
 from databases import Database
 
-from app.constants.user import UserConstant
 from app.schemas.statistics import StatisticsVO
 from app.utils.session import redis_client
 
@@ -43,8 +42,6 @@ class StatisticsService:
         avg_duration_ms = await self._calculate_avg_duration()
         active_user_count = await self._count_active_users(week_start, now)
         total_user_count = await self._count_total_users()
-        vip_user_count = await self._count_vip_users()
-        quota_used = await self._calculate_quota_used()
 
         stats = StatisticsVO(
             todayCount=today_count,
@@ -55,8 +52,6 @@ class StatisticsService:
             avgDurationMs=avg_duration_ms,
             activeUserCount=active_user_count,
             totalUserCount=total_user_count,
-            vipUserCount=vip_user_count,
-            quotaUsed=quota_used,
         )
 
         await self._set_cached_statistics(stats)
@@ -126,37 +121,6 @@ class StatisticsService:
     async def _count_total_users(self) -> int:
         value = await self.db.fetch_val("SELECT COUNT(1) FROM user WHERE isDelete = 0")
         return int(value or 0)
-
-    async def _count_vip_users(self) -> int:
-        value = await self.db.fetch_val(
-            query="""
-                SELECT COUNT(1)
-                FROM user
-                WHERE isDelete = 0
-                  AND userRole = :vipRole
-            """,
-            values={"vipRole": UserConstant.VIP_ROLE},
-        )
-        return int(value or 0)
-
-    async def _calculate_quota_used(self) -> int:
-        row = await self.db.fetch_one(
-            query="""
-                SELECT
-                    COUNT(1) AS normalUserCount,
-                    COALESCE(SUM(quota), 0) AS remainingQuota
-                FROM user
-                WHERE isDelete = 0
-                  AND userRole = :defaultRole
-            """,
-            values={"defaultRole": UserConstant.DEFAULT_ROLE},
-        )
-        if not row:
-            return 0
-        normal_user_count = int(row["normalUserCount"] or 0)
-        remaining_quota = int(row["remainingQuota"] or 0)
-        total_default_quota = normal_user_count * UserConstant.DEFAULT_QUOTA
-        return total_default_quota - remaining_quota
 
     async def _get_cached_statistics(self) -> Optional[StatisticsVO]:
         if redis_client is None:
