@@ -38,7 +38,41 @@
       </aside>
 
       <!-- 中间：主内容区 -->
-      <main ref="mainContentRef" class="main-content">
+      <main class="main-content">
+        <!-- AI 推理摘要与工具调用在主内容区连续展示 -->
+        <section v-if="realtimeLogs.length > 0" class="central-process-panel">
+          <div class="process-heading">
+            <h4 class="panel-title">
+              <ThunderboltOutlined />
+              AI 推理摘要与工具调用
+            </h4>
+            <button type="button" class="process-toggle" @click="processExpanded = !processExpanded">
+              {{ processExpanded ? '收起过程' : '查看过程' }}
+            </button>
+          </div>
+          <div
+            v-if="activeAgentProgress"
+            :class="['process-summary', activeAgentProgress.status]"
+          >
+            <LoadingOutlined v-if="activeAgentProgress.status === 'started'" class="process-spinner" />
+            <CheckCircleOutlined v-else-if="activeAgentProgress.status === 'completed'" />
+            <CloseCircleOutlined v-else />
+            <span><strong>{{ activeAgentProgress.title }}</strong> · {{ activeAgentProgress.summary }}</span>
+          </div>
+          <Transition name="expand">
+            <div v-show="processExpanded" ref="logsContainerRef" class="logs-container">
+              <div
+                v-for="(log, index) in realtimeLogs"
+                :key="index"
+                :class="['log-entry', log.level, log.kind]"
+              >
+                <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
+                <span class="log-message">{{ log.message }}</span>
+              </div>
+            </div>
+          </Transition>
+        </section>
+
         <!-- 阶段切换（带过渡动画） -->
         <Transition name="fade-slide" mode="out-in">
           <!-- 输入状态 -->
@@ -159,28 +193,16 @@
               <p class="article-subtitle">{{ article.subTitle }}</p>
             </div>
 
-            <!-- 大纲流式展示 -->
+            <!-- 大纲结果在生成完成后切换到可编辑状态 -->
             <div class="outline-preview">
               <div class="section-label">
                 <BulbOutlined />
                 <span>AI 正在规划文章大纲</span>
                 <span class="typing-cursor">|</span>
               </div>
-              <div v-if="parsedOutline.length > 0" class="outline-list">
-                <div
-                  v-for="item in parsedOutline"
-                  :key="item.section"
-                  class="outline-item fade-in"
-                >
-                  <div class="outline-title">{{ item.section }}. {{ item.title }}</div>
-                  <ul class="outline-points">
-                    <li v-for="(point, idx) in item.points" :key="idx">{{ point }}</li>
-                  </ul>
-                </div>
-              </div>
-              <div v-else class="outline-loading">
+              <div class="outline-loading">
                 <a-spin />
-                <span>正在构建文章结构...</span>
+                <span>{{ activeAgentProgress?.summary || '正在构建文章结构...' }}</span>
               </div>
             </div>
           </div>
@@ -224,10 +246,10 @@
             </div>
           </div>
 
-          <!-- 正文预览（流式输出） -->
-          <div v-if="article.content" class="content-preview">
-            <div v-html="markdownToHtml(article.content)" class="markdown-body"></div>
-            <span v-if="isStreaming" class="typing-cursor">|</span>
+          <!-- 正文在整个推理与配图流程结束后展示 -->
+          <div v-if="currentStep === 2" class="outline-loading content-generating-placeholder">
+            <a-spin />
+            <span>{{ activeAgentProgress?.summary || '正在撰写正文...' }}</span>
           </div>
 
           <!-- 配图进度 -->
@@ -340,40 +362,6 @@
             <InfoCircleOutlined />
             <span>等待您的确认...</span>
           </div>
-        </div>
-
-        <!-- 实时执行日志 -->
-        <div v-if="realtimeLogs.length > 0" class="panel-section realtime-logs-section">
-          <div class="process-heading">
-            <h4 class="panel-title">
-              <ThunderboltOutlined />
-              AI 思考摘要与工具调用
-            </h4>
-            <button type="button" class="process-toggle" @click="processExpanded = !processExpanded">
-              {{ processExpanded ? '收起过程' : '查看过程' }}
-            </button>
-          </div>
-          <div
-            v-if="activeAgentProgress"
-            :class="['process-summary', activeAgentProgress.status]"
-          >
-            <LoadingOutlined v-if="activeAgentProgress.status === 'started'" class="process-spinner" />
-            <CheckCircleOutlined v-else-if="activeAgentProgress.status === 'completed'" />
-            <CloseCircleOutlined v-else />
-            <span><strong>{{ activeAgentProgress.title }}</strong> · {{ activeAgentProgress.summary }}</span>
-          </div>
-          <Transition name="expand">
-            <div v-show="processExpanded" ref="logsContainerRef" class="logs-container">
-              <div
-                v-for="(log, index) in realtimeLogs"
-                :key="index"
-                :class="['log-entry', log.level, log.kind]"
-              >
-                <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
-                <span class="log-message">{{ log.message }}</span>
-              </div>
-            </div>
-          </Transition>
         </div>
 
         <!-- 当前选题提示 -->
@@ -606,7 +594,6 @@ const selectedProductId = ref<number>()
 const selectedPlatform = computed(() => platforms.value.find((platform) => platform.id === selectedPlatformId.value))
 const isCreating = ref(false)
 const isCompleted = ref(false)
-const isStreaming = ref(false)
 const isOutlineStreaming = ref(false)
 const currentStep = ref(0)
 const taskId = ref('')
@@ -695,9 +682,6 @@ const parsedOutline = computed<OutlineItem[]>(() => {
   }
 })
 
-// 内容区域引用（用于自动滚动）
-const mainContentRef = ref<HTMLElement | null>(null)
-
 // 配图进度
 const imageCount = ref(0)
 const totalImages = ref(5)
@@ -713,15 +697,6 @@ const article = ref<Partial<API.ArticleVO>>({
 })
 
 let eventSource: EventSource | null = null
-
-// 自动滚动到底部
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (mainContentRef.value) {
-      mainContentRef.value.scrollTop = mainContentRef.value.scrollHeight
-    }
-  })
-}
 
 // 开始创作
 const startCreate = async () => {
@@ -782,10 +757,6 @@ const addLog = (message: string, level: string = 'info', kind: RealtimeLog['kind
     message,
     kind,
   })
-  // 限制日志数量，最多保留 50 条
-  if (realtimeLogs.value.length > 50) {
-    realtimeLogs.value.shift()
-  }
   nextTick(() => {
     logsContainerRef.value?.scrollTo({ top: logsContainerRef.value.scrollHeight })
   })
@@ -812,6 +783,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
       }
       activeAgentProgress.value = progress
       processExpanded.value = status === 'started'
+        || !['agent1_generate_titles', 'agent2_generate_outline'].includes(progress.agent)
       if (status === 'started') {
         currentStep.value = agentStepIndexes[msg.agent] ?? currentStep.value
         currentPhase.value = msg.agent === 'agent1_generate_titles'
@@ -849,7 +821,6 @@ const handleSSEMessage = (msg: SSEMessage) => {
       currentPhase.value = 'OUTLINE_GENERATING'
       isOutlineStreaming.value = true
       outlineRaw.value += msg.content || ''
-      scrollToBottom()
       break
 
     case 'OUTLINE_GENERATED':
@@ -871,14 +842,11 @@ const handleSSEMessage = (msg: SSEMessage) => {
       // 正文流式输出，进入步骤2（撰写正文）
       currentPhase.value = 'CONTENT_GENERATING'
       currentStep.value = 2
-      isStreaming.value = true
       article.value.content += msg.content || ''
-      scrollToBottom()
       break
 
     case 'AGENT3_COMPLETE':
       // 正文完成，进入配图分析步骤
-      isStreaming.value = false
       currentStep.value = 3
       addLog('正文生成完成', 'success')
       break
@@ -923,7 +891,6 @@ const handleSSEMessage = (msg: SSEMessage) => {
     case 'MERGE_COMPLETE':
       // 图文合成完成
       article.value.fullContent = msg.fullContent
-      scrollToBottom()
       addLog('图文合成完成', 'success')
       break
 
@@ -1033,7 +1000,6 @@ const resetCreate = () => {
   outline.value = []
   isCreating.value = false
   isCompleted.value = false
-  isStreaming.value = false
   isOutlineStreaming.value = false
   processExpanded.value = false
   activeAgentProgress.value = null
@@ -1787,8 +1753,17 @@ onBeforeUnmount(() => {
   }
 }
 
-/* 实时日志 */
-.realtime-logs-section {
+/* 主内容区的 AI 过程时间线 */
+.central-process-panel {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto 24px;
+  padding: 18px 22px;
+  background: white;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+
   .process-heading {
     display: flex;
     align-items: center;
@@ -1796,7 +1771,7 @@ onBeforeUnmount(() => {
     gap: 8px;
 
     .panel-title {
-      margin-bottom: 10px;
+      margin: 0;
     }
   }
 
@@ -1819,7 +1794,7 @@ onBeforeUnmount(() => {
     border-radius: var(--radius-md);
     background: rgba(34, 197, 94, 0.08);
     color: var(--color-primary-dark);
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1.5;
 
     .anticon {
@@ -1856,12 +1831,12 @@ onBeforeUnmount(() => {
 
   .expand-enter-to,
   .expand-leave-from {
-    max-height: 340px;
+    max-height: 420px;
     opacity: 1;
   }
 
   .logs-container {
-    max-height: 300px;
+    max-height: 380px;
     overflow-y: auto;
     background: var(--color-background);
     border-radius: var(--radius-md);
@@ -1872,7 +1847,7 @@ onBeforeUnmount(() => {
       display: flex;
       gap: 8px;
       padding: 6px 8px;
-      font-size: 11px;
+      font-size: 12px;
       line-height: 1.4;
       border-radius: var(--radius-sm);
       margin-bottom: 4px;
