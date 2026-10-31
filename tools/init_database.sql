@@ -1,5 +1,5 @@
 -- 完整数据库初始化脚本：建库、建表及初始数据
--- 适用于全新数据库初始化
+-- 同时可用于已有数据库，补齐营销资料表和文章关联字段
 
 # 数据库初始化（基础表结构）
 # @author <a href="https://codefather.cn">编程导航学习圈</a>
@@ -81,6 +81,27 @@ CREATE TABLE IF NOT EXISTS article
     INDEX idx_createTime (createTime),
     INDEX idx_userId_status (userId, status)
 ) COMMENT '文章表' COLLATE = utf8mb4_unicode_ci;
+
+-- 兼容 article 已存在但尚未包含营销关联字段的数据库；新数据库中这两个字段已随表创建。
+SET @marketing_schema_sql = IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = 'productId') = 0,
+    'ALTER TABLE article ADD COLUMN productId BIGINT NULL COMMENT ''产品档案ID''',
+    'SELECT 1'
+);
+PREPARE marketing_schema_stmt FROM @marketing_schema_sql;
+EXECUTE marketing_schema_stmt;
+DEALLOCATE PREPARE marketing_schema_stmt;
+
+SET @marketing_schema_sql = IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = 'platformId') = 0,
+    'ALTER TABLE article ADD COLUMN platformId BIGINT NULL COMMENT ''营销平台ID''',
+    'SELECT 1'
+);
+PREPARE marketing_schema_stmt FROM @marketing_schema_sql;
+EXECUTE marketing_schema_stmt;
+DEALLOCATE PREPARE marketing_schema_stmt;
 
 -- 产品档案（原始文档只在解析时使用，标准档案以 JSON 保存）
 CREATE TABLE IF NOT EXISTS product_profile

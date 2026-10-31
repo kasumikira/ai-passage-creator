@@ -150,7 +150,7 @@ AI 营销内容工作台把产品知识、发布平台规则和历史营销资�
 
 ### 1. 初始化数据库（Windows）
 
-全新数据库执行 `tools/init_database.sql`。已有数据库需额外执行一次 `tools/migrate_marketing.sql`，添加营销资料表和文章关联字段。
+全新或已有数据库都执行 `tools/init_database.sql`；脚本会创建营销资料表，并为已有文章表补齐产品和平台关联字段。
 
 运行根目录的 [初始化数据库.bat](初始化数据库.bat)，脚本会：
 

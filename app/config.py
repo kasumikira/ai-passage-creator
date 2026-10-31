@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     session_max_age: int = 2592000  # 30 天
 
     # 密码加密盐值
-    password_salt: str = "5a2b585d0ffbdd219c0a50fa423a98ea254b78c3a4133ba3cd6f15a6d05f0d76"
+    password_salt: str = "yupi"
 
     # AI 文本生成配置（OpenAI 兼容协议，默认 DeepSeek 官方端点）
     llm_api_key: str = "dummy"
