@@ -1,9 +1,10 @@
 """SVG 概念示意图生成服务"""
 
 import logging
-from typing import Optional
+from typing import Callable, Optional
 from openai import AsyncOpenAI
 
+from app.agent.runtime import Agent, AgentRunner
 from app.config import settings
 from app.constants.prompt import PromptConstant
 from app.constants.article import ArticleConstant
@@ -31,12 +32,20 @@ class SvgDiagramService(ImageSearchService):
         """此方法已废弃，请使用 get_image_data()"""
         return None
 
-    async def get_image_data(self, request: ImageRequest) -> Optional[ImageData]:
+    async def get_image_data(
+        self,
+        request: ImageRequest,
+        reasoning_stream_handler: Optional[Callable[[str], None]] = None,
+    ) -> Optional[ImageData]:
         """获取图片数据"""
         requirement = request.get_effective_param(True)
-        return await self.generate_svg_diagram_data(requirement)
+        return await self.generate_svg_diagram_data(requirement, reasoning_stream_handler)
 
-    async def generate_svg_diagram_data(self, requirement: str) -> Optional[ImageData]:
+    async def generate_svg_diagram_data(
+        self,
+        requirement: str,
+        reasoning_stream_handler: Optional[Callable[[str], None]] = None,
+    ) -> Optional[ImageData]:
         """
         生成 SVG 概念示意图数据
 
@@ -50,29 +59,29 @@ class SvgDiagramService(ImageSearchService):
             logger.warning("SVG 图表需求为空")
             return None
 
-        try:
-            # 1. 调用 LLM 生成 SVG 代码
-            svg_code = await self._call_llm_to_generate_svg(requirement)
+        # 1. 调用 LLM 生成 SVG 代码
+        svg_code = await self._call_llm_to_generate_svg(requirement, reasoning_stream_handler)
 
-            if not svg_code or not svg_code.strip():
-                logger.error("LLM 未生成 SVG 代码")
-                return None
-
-            # 2. 验证 SVG 格式
-            if not self._is_valid_svg(svg_code):
-                logger.error("生成的 SVG 代码格式无效")
-                return None
-
-            # 3. 转换为字节数据
-            svg_bytes = svg_code.encode('utf-8')
-
-            logger.info(f"SVG 概念示意图生成成功, size={len(svg_bytes)} bytes")
-            return ImageData.from_bytes(svg_bytes, "image/svg+xml")
-        except Exception as e:
-            logger.error(f"SVG 概念示意图生成异常, requirement={requirement}, error={e}")
+        if not svg_code or not svg_code.strip():
+            logger.error("LLM 未生成 SVG 代码")
             return None
 
-    async def _call_llm_to_generate_svg(self, requirement: str) -> Optional[str]:
+        # 2. 验证 SVG 格式
+        if not self._is_valid_svg(svg_code):
+            logger.error("生成的 SVG 代码格式无效")
+            return None
+
+        # 3. 转换为字节数据
+        svg_bytes = svg_code.encode('utf-8')
+
+        logger.info(f"SVG 概念示意图生成成功, size={len(svg_bytes)} bytes")
+        return ImageData.from_bytes(svg_bytes, "image/svg+xml")
+
+    async def _call_llm_to_generate_svg(
+        self,
+        requirement: str,
+        reasoning_stream_handler: Optional[Callable[[str], None]] = None,
+    ) -> Optional[str]:
         """调用 LLM 生成 SVG 代码"""
         prompt = PromptConstant.SVG_DIAGRAM_GENERATION_PROMPT.replace(
             "{requirement}", requirement
@@ -80,12 +89,14 @@ class SvgDiagramService(ImageSearchService):
 
         logger.info("开始调用 LLM 生成 SVG 概念示意图")
 
-        response = await self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}]
+        result = await AgentRunner(
+            self.client, self.model, reasoning_effort=settings.llm_reasoning_effort
+        ).run(
+            Agent(name="SVG 配图", instructions="根据用户要求生成 SVG 代码。"),
+            prompt,
+            reasoning_stream_handler=reasoning_stream_handler,
         )
-
-        svg_code = response.choices[0].message.content.strip()
+        svg_code = result.final_output.strip()
 
         # 提取 SVG 代码（移除可能的 markdown 代码块标记）
         svg_code = self._extract_svg_code(svg_code)

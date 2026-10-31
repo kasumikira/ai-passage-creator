@@ -12,6 +12,7 @@ from app.routers import (
     health_router,
     article_router,
     statistics_router,
+    marketing_router,
 )
 from app.exceptions import BusinessException, ErrorCode
 from app.utils.session import init_redis, close_redis
@@ -36,8 +37,8 @@ async def lifespan(app: FastAPI):
 
 # 创建 FastAPI 应用
 app = FastAPI(
-    title="AI 爆款文章创作器",
-    description="基于多智能体编排的 AI 文章创作平台",
+    title="AI 营销内容工作台",
+    description="管理产品与平台资料、生成营销内容并分析营销效果的多智能体平台",
     version="0.0.1",
     lifespan=lifespan
 )
@@ -85,13 +86,14 @@ app.include_router(health_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(article_router, prefix="/api")
 app.include_router(statistics_router, prefix="/api")
+app.include_router(marketing_router, prefix="/api")
 
 
 @app.get("/")
 async def root():
     """根路径"""
     return {
-        "message": "AI 爆款文章创作器 - Python 后端",
+        "message": "AI 营销内容工作台 - Python 后端",
         "version": "0.0.1",
         "docs": "/docs"
     }

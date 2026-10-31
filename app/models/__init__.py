@@ -3,6 +3,7 @@
 from app.models.user import User
 from app.models.article import Article
 from app.models.agent_log import AgentLog
+from app.models.marketing import MarketingPlatform, ProductProfile
 from app.models.enums import (
     ArticleStatusEnum,
     ArticlePhaseEnum,
@@ -14,6 +15,8 @@ __all__ = [
     "User",
     "Article",
     "AgentLog",
+    "ProductProfile",
+    "MarketingPlatform",
     "ArticleStatusEnum",
     "ArticlePhaseEnum",
     "ImageMethodEnum",

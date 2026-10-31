@@ -29,28 +29,24 @@ class IconifyService(ImageSearchService):
             logger.warning("Iconify 搜索关键词为空")
             return None
 
-        try:
-            # 1. 搜索图标
-            search_url = self._build_search_url(keywords)
-            search_result = await self._call_api(search_url)
+        # 1. 搜索图标
+        search_url = self._build_search_url(keywords)
+        search_result = await self._call_api(search_url)
 
-            if not search_result:
-                return None
-
-            # 2. 解析结果，获取第一个图标
-            icon_name = self._extract_first_icon(search_result)
-            if not icon_name:
-                logger.warning(f"Iconify 未检索到图标: {keywords}")
-                return None
-
-            # 3. 构建 SVG URL
-            svg_url = self._build_svg_url(icon_name)
-            logger.info(f"Iconify 图标检索成功: {keywords} -> {icon_name}")
-
-            return svg_url
-        except Exception as e:
-            logger.error(f"Iconify 图标检索异常, keywords={keywords}, error={e}")
+        if not search_result:
             return None
+
+        # 2. 解析结果，获取第一个图标
+        icon_name = self._extract_first_icon(search_result)
+        if not icon_name:
+            logger.warning(f"Iconify 未检索到图标: {keywords}")
+            return None
+
+        # 3. 构建 SVG URL
+        svg_url = self._build_svg_url(icon_name)
+        logger.info(f"Iconify 图标检索成功: {keywords} -> {icon_name}")
+
+        return svg_url
 
     def get_method(self) -> ImageMethodEnum:
         """获取图片服务类型"""
@@ -67,26 +63,16 @@ class IconifyService(ImageSearchService):
 
     async def _call_api(self, url: str) -> Optional[dict]:
         """调用 Iconify API"""
-        try:
-            response = await self.client.get(url)
-            if response.status_code != 200:
-                logger.error(f"Iconify API 调用失败: {response.status_code}")
-                return None
-            return response.json()
-        except Exception as e:
-            logger.error(f"Iconify API 调用异常: {e}")
-            return None
+        response = await self.client.get(url)
+        response.raise_for_status()
+        return response.json()
 
     def _extract_first_icon(self, search_result: dict) -> Optional[str]:
         """从搜索结果中提取第一个图标名称"""
-        try:
-            icons = search_result.get("icons", [])
-            if not icons:
-                return None
-            return icons[0]
-        except Exception as e:
-            logger.error(f"解析 Iconify 搜索结果失败: {e}")
+        icons = search_result.get("icons", [])
+        if not icons:
             return None
+        return icons[0]
 
     def _build_svg_url(self, icon_name: str) -> str:
         """

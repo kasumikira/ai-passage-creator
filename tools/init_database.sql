@@ -1,5 +1,5 @@
 -- 完整数据库初始化脚本：建库、建表及初始数据
--- 适用于全新数据库初始化
+-- 同时可用于已有数据库，补齐营销资料表和文章关联字段
 
 # 数据库初始化（基础表结构）
 # @author <a href="https://codefather.cn">编程导航学习圈</a>
@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS article
     id              BIGINT AUTO_INCREMENT COMMENT 'id' PRIMARY KEY,
     taskId          VARCHAR(64)                        NOT NULL COMMENT '任务ID（UUID）',
     userId          BIGINT                             NOT NULL COMMENT '用户ID',
+    productId       BIGINT                             NULL COMMENT '产品档案ID',
+    platformId      BIGINT                             NULL COMMENT '营销平台ID',
     topic           VARCHAR(500)                       NOT NULL COMMENT '选题',
     style           VARCHAR(20) NULL COMMENT '文章风格：tech/emotional/educational/humorous',
     userDescription TEXT NULL COMMENT '用户补充描述',
@@ -64,7 +66,7 @@ CREATE TABLE IF NOT EXISTS article
     outline         JSON                               NULL COMMENT '大纲（JSON格式）',
     content         TEXT                               NULL COMMENT '正文（Markdown格式）',
     fullContent     TEXT                               NULL COMMENT '完整图文（Markdown格式，含配图）',
-    coverImage      VARCHAR(512)                       NULL COMMENT '封面图 URL',
+    coverImage      VARCHAR(512)                       NULL COMMENT '封面图 SHA-256 图片引用',
     images          JSON                               NULL COMMENT '配图列表（JSON数组，包含封面图 position=1）',
     status          VARCHAR(20) DEFAULT 'PENDING'      NOT NULL COMMENT '状态：PENDING/PROCESSING/COMPLETED/FAILED',
     phase           VARCHAR(50) DEFAULT 'PENDING' COMMENT '当前阶段：PENDING/TITLE_GENERATING/TITLE_SELECTING/OUTLINE_GENERATING/OUTLINE_EDITING/CONTENT_GENERATING',
@@ -79,6 +81,97 @@ CREATE TABLE IF NOT EXISTS article
     INDEX idx_createTime (createTime),
     INDEX idx_userId_status (userId, status)
 ) COMMENT '文章表' COLLATE = utf8mb4_unicode_ci;
+
+-- 兼容 article 已存在但尚未包含营销关联字段的数据库；新数据库中这两个字段已随表创建。
+SET @marketing_schema_sql = IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = 'productId') = 0,
+    'ALTER TABLE article ADD COLUMN productId BIGINT NULL COMMENT ''产品档案ID''',
+    'SELECT 1'
+);
+PREPARE marketing_schema_stmt FROM @marketing_schema_sql;
+EXECUTE marketing_schema_stmt;
+DEALLOCATE PREPARE marketing_schema_stmt;
+
+SET @marketing_schema_sql = IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = 'platformId') = 0,
+    'ALTER TABLE article ADD COLUMN platformId BIGINT NULL COMMENT ''营销平台ID''',
+    'SELECT 1'
+);
+PREPARE marketing_schema_stmt FROM @marketing_schema_sql;
+EXECUTE marketing_schema_stmt;
+DEALLOCATE PREPARE marketing_schema_stmt;
+
+-- 图片内容按 SHA-256 去重保存，文章图片表记录文章位置与内容哈希的关联。
+CREATE TABLE IF NOT EXISTS image_blob
+(
+    sha256      CHAR(64)    NOT NULL PRIMARY KEY COMMENT '图片内容 SHA-256',
+    mimeType    VARCHAR(100) NOT NULL COMMENT '图片 MIME 类型',
+    imageData   LONGBLOB    NOT NULL COMMENT '图片二进制数据',
+    createTime  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+) COMMENT '按内容哈希保存的图片' COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS article_image
+(
+    taskId       VARCHAR(64) NOT NULL COMMENT '文章任务ID',
+    position     INT         NOT NULL COMMENT '图片在文章中的位置',
+    imageSha256  CHAR(64)    NOT NULL COMMENT '图片内容 SHA-256',
+    createTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (taskId, position),
+    INDEX idx_article_image_sha256 (imageSha256),
+    CONSTRAINT fk_article_image_task
+        FOREIGN KEY (taskId) REFERENCES article (taskId) ON DELETE CASCADE,
+    CONSTRAINT fk_article_image_blob
+        FOREIGN KEY (imageSha256) REFERENCES image_blob (sha256)
+) COMMENT '文章与图片的关联' COLLATE = utf8mb4_unicode_ci;
+
+-- 产品档案（原始文档只在解析时使用，标准档案以 JSON 保存）
+CREATE TABLE IF NOT EXISTS product_profile
+(
+    id             BIGINT AUTO_INCREMENT COMMENT 'id' PRIMARY KEY,
+    ownerId        BIGINT                             NOT NULL COMMENT '所属用户ID',
+    name           VARCHAR(200)                       NOT NULL COMMENT '产品名称',
+    sourceFilename VARCHAR(255)                       NOT NULL COMMENT '来源文件名',
+    profile        JSON                               NOT NULL COMMENT 'AI 整理后的标准产品档案',
+    createTime     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updateTime     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    isDelete       TINYINT  DEFAULT 0                 NOT NULL,
+    INDEX idx_product_owner (ownerId, isDelete),
+    INDEX idx_product_name (name)
+) COMMENT '产品档案' COLLATE = utf8mb4_unicode_ci;
+
+-- 营销平台规则和受众资料
+CREATE TABLE IF NOT EXISTS marketing_platform
+(
+    id                  BIGINT AUTO_INCREMENT COMMENT 'id' PRIMARY KEY,
+    platformKey         VARCHAR(64)                        NOT NULL COMMENT '平台唯一标识',
+    name                VARCHAR(100)                       NOT NULL COMMENT '平台名称',
+    audienceDescription TEXT                               NOT NULL COMMENT '受众特点',
+    contentRules        TEXT                               NOT NULL COMMENT '内容规则',
+    preferredFormats    TEXT                               NOT NULL COMMENT '推荐内容形式',
+    updateTime          DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    isDelete            TINYINT  DEFAULT 0                 NOT NULL,
+    UNIQUE KEY uk_platform_key (platformKey)
+) COMMENT '营销平台资料' COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO marketing_platform (platformKey, name, audienceDescription, contentRules, preferredFormats)
+SELECT 'xiaohongshu', '小红书', '以年轻女性为主，关注生活方式、消费决策、真实体验和可收藏的实用信息。',
+       '标题和封面要清晰具体；使用自然口语和真实体验表达；避免夸大功效、虚假种草及站外导流；适合分点表达和明确话题标签。',
+       '经验分享、清单攻略、前后对比（有真实依据时）、图文笔记、短视频'
+WHERE NOT EXISTS (SELECT 1 FROM marketing_platform WHERE platformKey = 'xiaohongshu');
+
+INSERT INTO marketing_platform (platformKey, name, audienceDescription, contentRules, preferredFormats)
+SELECT 'wechat', '微信公众号', '适合关注品牌、行业和深度信息的订阅用户，阅读场景以完整文章和持续服务为主。',
+       '标题准确且有信息量；开篇尽快说明价值；正文结构清晰、论据可信；避免标题与内容不符及未经证实的结论。',
+       '深度文章、产品指南、案例拆解、服务通知、系列内容'
+WHERE NOT EXISTS (SELECT 1 FROM marketing_platform WHERE platformKey = 'wechat');
+
+INSERT INTO marketing_platform (platformKey, name, audienceDescription, contentRules, preferredFormats)
+SELECT 'douyin', '抖音', '偏好短时长、强节奏和直观演示的移动端用户，内容发现以推荐流和视频互动为主。',
+       '前几秒呈现主题或结果；口播自然、镜头信息明确；画面和文案简洁；避免虚假承诺、误导性对比和违规营销。',
+       '短视频脚本、口播、情景演示、直播提纲、字幕文案'
+WHERE NOT EXISTS (SELECT 1 FROM marketing_platform WHERE platformKey = 'douyin');
 
 -- 智能体执行日志表
 CREATE TABLE IF NOT EXISTS agent_log

@@ -5,18 +5,18 @@ class PromptConstant:
     """Prompt 模板常量"""
 
     # 智能体1：生成标题方案
-    AGENT1_TITLE_PROMPT = """你是一位爆款文章标题专家,擅长创作吸引人的标题。
+    AGENT1_TITLE_PROMPT = """你是一位营销内容标题专家,擅长创作清晰、有吸引力且符合发布平台的标题和开场钩子。
 
-根据以下选题,生成 3-5 个爆款文章标题方案:
+根据以下选题,生成 3-5 个适配目标发布平台的标题方案:
 选题：{topic}
 
 要求:
 1. 每个方案包含主标题和副标题
-2. 主标题要包含数字、情绪化词汇,吸引眼球
+2. 标题要具体、有吸引力，不要为了点击率添加无依据的数字或夸张承诺
 3. 副标题要补充说明,增强吸引力
 4. 标题要简洁有力,不超过30字
 5. 不同方案要有不同的切入角度
-6. 符合新媒体爆款文章的风格
+6. 参考后文提供的平台受众和规则；短视频平台的标题可作为开场钩子
 
 请直接返回 JSON 格式,不要有其他内容:
 [
@@ -36,9 +36,9 @@ class PromptConstant:
 """
 
     # 智能体2：生成大纲
-    AGENT2_OUTLINE_PROMPT = """你是一位专业的文章策划师,擅长设计文章结构。
+    AGENT2_OUTLINE_PROMPT = """你是一位专业的营销内容策划师,擅长设计适配不同平台的内容结构。
 
-根据以下标题,生成文章大纲:
+根据以下标题,生成内容大纲:
 主标题：{mainTitle}
 副标题：{subTitle}
 {descriptionSection}
@@ -47,7 +47,8 @@ class PromptConstant:
 1. 大纲要有清晰的逻辑结构
 2. 包含开头引入、核心观点(3-5个)、结尾升华
 3. 每个章节要有明确的标题和核心要点(2-3个)
-4. 适合2000字左右的文章
+4. 根据目标平台推荐的内容形式安排结构；短视频脚本应考虑开场、镜头/口播段落和收尾
+5. 长度与表达节奏应符合平台和内容形式
 
 请直接返回 JSON 格式,不要有其他内容:
 {{
@@ -69,20 +70,20 @@ class PromptConstant:
 """
 
     # 智能体3：生成正文
-    AGENT3_CONTENT_PROMPT = """你是一位资深的内容创作者,擅长撰写优质文章。
+    AGENT3_CONTENT_PROMPT = """你是一位资深的营销内容创作者,擅长为不同平台创作清晰、可信、有吸引力的内容。
 
-根据以下大纲,创作文章正文:
+根据以下大纲,创作适合目标发布平台的内容:
 主标题：{mainTitle}
 副标题：{subTitle}
 大纲：
 {outline}
 
 要求:
-1. 内容要充实,每个章节300-400字
-2. 语言流畅,富有感染力
-3. 适当使用金句,增强可读性
-4. 添加过渡句,确保逻辑连贯
-5. 使用 Markdown 格式,章节使用 ## 标题
+1. 根据目标平台和内容形式控制篇幅和节奏
+2. 语言自然、有感染力，提供清晰的用户价值
+3. 只使用产品档案和可检索资料支持的产品事实，不编造功效、数据或用户评价
+4. 短视频脚本写出镜头/画面提示和口播内容，图文内容保持易读的段落结构
+5. 使用 Markdown 格式，章节使用 ## 标题
 
 请直接返回 Markdown 格式的正文内容,不要有其他内容。
 """
@@ -95,7 +96,7 @@ class PromptConstant:
 正文：
 {content}
 
-可用的配图方式：
+可用的配图方式（仅以下来源可用）：
 {availableMethods}
 
 {methodUsageGuide}
@@ -103,80 +104,44 @@ class PromptConstant:
 要求:
 1. 识别需要配图的位置(封面、关键章节、段落之间等)
 2. 根据文章内容和结构灵活决定配图数量，避免过多或过少
-3. **在正文中插入占位符**：使用以下两种格式
+3. **在正文中插入占位符**：
    - 普通图片占位符：{{IMAGE_PLACEHOLDER_N}}，其中 N 为配图序号（1, 2, 3...），必须独占一行
-   - Icon 占位符：{{ICON_PLACEHOLDER_N}}，可以放在文字行内任意位置（用于 ICONIFY 类型）
    - 注意：position=1 的封面图不需要占位符，不要放在正文中
-   - 配图占位符可以放在任意合适位置（章节标题后、段落之间、列表项中、文字行内等）
-4. **只能从上述可用的配图方式中选择**, 为每个配图选择最合适的图片来源(imageSource):
-   - PEXELS: 适合真实场景、产品照片、人物照片、自然风景等写实图片
-   - NANO_BANANA: 适合创意插画、信息图表、需要文字渲染、抽象概念、艺术风格等 AI 生成图片
-   - MERMAID: 适合流程图、架构图、时序图、关系图、甘特图等结构化图表
-   - ICONIFY: 适合图标、符号、小型装饰性图标（如：箭头、勾选、星星、心形等）
-   - EMOJI_PACK: 适合表情包、搞笑图片、轻松幽默的配图
-   - SVG_DIAGRAM: 适合概念示意图、思维导图样式、逻辑关系展示（不涉及精确数据）
-5. 对于 PEXELS 来源: 提供英文搜索关键词(keywords),要准确、具体
-6. 对于 NANO_BANANA 来源: 提供详细的英文生图提示词(prompt),描述场景、风格、细节
-7. 对于 MERMAID 来源:
-   - 分析文章内容，识别需要流程图的位置（如：工作流程、系统架构、数据流向等）
-   - 在 prompt 字段生成完整的 Mermaid 代码
-   - keywords 留空
-8. 对于 ICONIFY 来源:
-   - 识别需要图标的位置（如：列表项标记、步骤指示、重点强调、文字行内装饰等）
-   - 可以使用 {{ICON_PLACEHOLDER_N}} 放在文字行内，也可以使用 {{IMAGE_PLACEHOLDER_N}} 独占一行
-   - 提供英文图标关键词（keywords），如：check、arrow、star、heart
-   - prompt 留空
-9. 对于 EMOJI_PACK 来源:
-   - 识别文章中轻松幽默、需要表情包的位置
-   - 提供中文关键词（keywords）
-   - prompt 留空
-   - 系统会自动在关键词后添加"表情包"进行搜索
-10. 对于 SVG_DIAGRAM 来源:
-   - 识别文章中需要展示概念、关系、逻辑的位置（不涉及精确数据）
-   - 在 prompt 字段描述示意图需求（中文），说明要表达的概念和关系
-   - keywords 留空
-   - 示例：绘制思维导图样式的图，中心是"自律"，周围4个分支：习惯、环境、反馈、系统
-11. placeholderId 必须与正文中插入的占位符完全一致
-12. position=1 为封面图
+   - 配图占位符可以放在任意合适位置（章节标题后、段落之间、列表项中等）
+4. imageSource 必须严格等于上方可用方式中的一个值，不得返回未列出的来源
+5. 根据可用方式的使用指南填写 keywords、prompt、memeId 和占位符，不要使用未提供的方式说明
+6. 当 imageSource=MEME 时，必须先调用 search_memes；只能使用工具返回的 memeId，且只填写 memeId，不填写 keywords 和 prompt
+7. placeholderId 必须与正文中插入的占位符完全一致
+8. position=1 为封面图
 
 请直接返回 JSON 格式,不要有其他内容:
 {{
-  "contentWithPlaceholders": "## 章节标题1\\n\\n正文内容...\\n\\n{{IMAGE_PLACEHOLDER_1}}\\n\\n## 章节标题2\\n\\n更多正文内容... {{ICON_PLACEHOLDER_1}} 行内图标示例\\n\\n{{IMAGE_PLACEHOLDER_2}}\\n\\n...",
+  "contentWithPlaceholders": "## 章节标题1\\n\\n正文内容...\\n\\n{{IMAGE_PLACEHOLDER_1}}\\n\\n## 章节标题2\\n\\n更多正文内容...\\n\\n...",
   "imageRequirements": [
     {{
       "position": 1,
       "type": "cover",
       "sectionTitle": "",
-      "imageSource": "NANO_BANANA",
+      "imageSource": "从上方可用方式中选择一个值",
       "keywords": "",
-      "prompt": "A modern minimalist illustration of AI technology concept, featuring abstract neural network patterns with blue and purple gradient colors, clean design suitable for article cover, 16:9 aspect ratio",
+      "prompt": "按所选方式的使用指南填写",
       "placeholderId": ""
     }},
     {{
       "position": 2,
       "type": "section",
       "sectionTitle": "章节标题1",
-      "imageSource": "PEXELS",
-      "keywords": "business success teamwork office",
-      "prompt": "",
+      "imageSource": "从上方可用方式中选择一个值",
+      "keywords": "",
+      "prompt": "按所选方式的使用指南填写",
       "placeholderId": "{{IMAGE_PLACEHOLDER_1}}"
     }},
     {{
       "position": 3,
-      "type": "inline",
-      "sectionTitle": "",
-      "imageSource": "ICONIFY",
-      "keywords": "check circle",
-      "prompt": "",
-      "placeholderId": "{{ICON_PLACEHOLDER_1}}"
-    }},
-    {{
-      "position": 4,
       "type": "section",
       "sectionTitle": "章节标题2",
-      "imageSource": "MERMAID",
-      "keywords": "",
-      "prompt": "flowchart TB\\n    A[用户请求] --> B[负载均衡]\\n    B --> C[应用服务器]",
+      "imageSource": "MEME",
+      "memeId": "meme_001",
       "placeholderId": "{{IMAGE_PLACEHOLDER_2}}"
     }}
   ]

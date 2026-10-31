@@ -1,6 +1,7 @@
 """配置管理"""
 
 from pathlib import Path
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 获取项目根目录
@@ -33,23 +34,17 @@ class Settings(BaseSettings):
     session_max_age: int = 2592000  # 30 天
 
     # 密码加密盐值
-    password_salt: str = "5a2b585d0ffbdd219c0a50fa423a98ea254b78c3a4133ba3cd6f15a6d05f0d76"
+    password_salt: str = "yupi"
 
     # AI 文本生成配置（OpenAI 兼容协议，默认 DeepSeek 官方端点）
     llm_api_key: str = "dummy"
     llm_base_url: str = "https://api.deepseek.com"
     llm_model: str = "deepseek-flash"
+    llm_reasoning_effort: Optional[str] = None
 
     # Pexels 图片搜索
     pexels_api_key: str = "dummy"
     pexels_api_url: str = "https://api.pexels.com/v1/search"
-
-    # 腾讯云 COS
-    tencent_cos_secret_id: str = "dummy"
-    tencent_cos_secret_key: str = "dummy"
-    tencent_cos_region: str = "dummy"
-    tencent_cos_bucket: str = "dummy"
-    tencent_cos_domain: str = "dummy"
 
     # AI 生图配置（格式：google-genai=Google GenAI 协议 / openai=OpenAI images 兼容协议）
     image_gen_format: str = "google-genai"
@@ -61,11 +56,9 @@ class Settings(BaseSettings):
     image_gen_output_mime_type: str = "image/png"
 
     # Mermaid 配置
-    mermaid_cli_command: str = "mmdc"
     mermaid_background_color: str = "transparent"
     mermaid_output_format: str = "svg"
     mermaid_width: int = 1200
-    mermaid_timeout: int = 30000
 
     # Iconify 配置
     iconify_api_url: str = "https://api.iconify.design"
@@ -74,9 +67,10 @@ class Settings(BaseSettings):
     iconify_default_color: str = ""
 
     # 表情包配置
-    emoji_pack_search_url: str = "https://cn.bing.com/images/async"
-    emoji_pack_suffix: str = "表情包"
-    emoji_pack_timeout: int = 10000
+    meme_search_url: str = "https://cn.bing.com/images/async"
+    meme_suffix: str = "表情包"
+    meme_timeout: int = 10000
+    meme_default_limit: int = 3
 
     # SVG 示意图配置
     svg_diagram_default_width: int = 800
@@ -85,7 +79,6 @@ class Settings(BaseSettings):
 
     # 多智能体并行编排配置
     agent_image_max_concurrency: int = 3
-    agent_image_fail_fast: bool = True
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),

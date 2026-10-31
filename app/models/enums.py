@@ -59,7 +59,7 @@ class ImageMethodEnum(str, Enum):
     NANO_BANANA = "NANO_BANANA"
     MERMAID = "MERMAID"
     ICONIFY = "ICONIFY"
-    EMOJI_PACK = "EMOJI_PACK"
+    MEME = "MEME"
     SVG_DIAGRAM = "SVG_DIAGRAM"
     PICSUM = "PICSUM"
 
@@ -111,6 +111,15 @@ class SseMessageTypeEnum(str, Enum):
 
     # 智能体3流式输出（正文）
     AGENT3_STREAMING = "AGENT3_STREAMING"
+
+    # 智能体推理过程流式输出（DeepSeek reasoning_content）
+    AGENT_REASONING_STREAMING = "AGENT_REASONING_STREAMING"
+
+    # 智能体工具调用
+    TOOL_CALL = "TOOL_CALL"
+
+    # 智能体进度摘要（仅面向用户的简短状态，不包含内部推理文本）
+    AGENT_PROGRESS = "AGENT_PROGRESS"
 
     # 智能体3完成（生成正文）
     AGENT3_COMPLETE = "AGENT3_COMPLETE"

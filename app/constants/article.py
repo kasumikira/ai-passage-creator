@@ -23,7 +23,7 @@ class ArticleConstant:
     BING_IMAGE_SEARCH_URL = "https://cn.bing.com/images/async"
 
     # 表情包关键词后缀（程序固定拼接）
-    EMOJI_PACK_SUFFIX = "表情包"
+    MEME_SUFFIX = "表情包"
 
     # Bing 图片搜索每批最大数量
     BING_MAX_IMAGES = 30
@@ -39,6 +39,3 @@ class ArticleConstant:
 
     # 并行配图最大并发数默认值
     AGENT_IMAGE_MAX_CONCURRENCY = 3
-
-    # 并行配图失败策略（True 表示快速失败）
-    AGENT_IMAGE_FAIL_FAST = True

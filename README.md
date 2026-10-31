@@ -1,10 +1,10 @@
-# AI 爆款文章创作器 ✍️
+# AI 营销内容工作台 ✍️
 
 <div align="center">
 
-**AI 爆款文章创作器（Python 版）**
+**营销资料驱动的多智能体内容制作平台**
 
-基于 FastAPI + Vue 3 的多智能体图文创作平台，自动完成从选题、大纲、正文到配图的全流程创作
+基于 FastAPI + Vue 3，管理产品档案和平台规则，按渠道生成营销内容，并分析营销效果
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)
@@ -16,12 +16,12 @@
 
 ## 🏗 项目简介
 
-AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文创作平台，通过 **5 个智能体协作** 完成从选题到图文文章的全自动创作，每个阶段都支持用户介入，实现人机协作的创作体验。
+AI 营销内容工作台把产品知识、发布平台规则和历史营销资料带入内容创作。用户上传产品文档后，Python 提取文档文字，由 AI 整理为标准产品档案并保存在数据库；创作任务会将所选平台的受众、内容规则和产品资料自动注入生成上下文。
 
 ```
-阶段1: 选题 → 生成 3-5 个标题方案 → 用户选择
-阶段2: 标题 → 生成大纲 → 用户编辑 / AI 优化大纲
-阶段3: 大纲 → 生成正文 → 分析配图需求 → 生成配图 → 图文合成
+产品资料: DOCX / Markdown / PPT / PPTX → Docling 提取文字 → AI 标准化产品档案 → 数据库
+内容创作: 主题 + 产品档案 + 发布平台 → 标题 → 内容结构 → 正文 / 脚本 → 配图
+营销复盘: mock 效果数据 → 平台对比与趋势图 → AI 分析和建议
 ```
 
 > 本项目为「编程导航」AI 爆款文章创作器实战课程的 Python 重写版：后端由 Spring Boot 重写为 FastAPI，功能与原版对齐，已移除 VIP 会员与支付体系，所有创作功能对所有用户开放。
@@ -30,8 +30,11 @@ AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文�
 
 | 特性 | 说明 | 价值 |
 |------|------|------|
-| 🤖 多智能体协作 | 5 个 Agent 分工协作，统一编排 | 专业分工，质量更高 |
-| 🎨 多元配图 | 6 种配图策略 + 自动降级 | 图文并茂，永不中断 |
+| 🤖 可复用 Agent 运行时 | 指令、函数工具、上下文和智能体交接可组合 | 支持创作、资料整理和效果分析等场景 |
+| 🗂️ 营销资料库 | 产品档案和平台受众/规则保存在数据库 | 内容贴近产品和渠道 |
+| 🔎 营销检索工具 | 互联网、图片、产品档案、历史内容和营销数据检索 | 让 AI 使用已有知识和数据 |
+| 📊 营销效果分析 | mock 数据仪表盘与 AI 归因建议 | 展示指标并用于后续创作 |
+| 🎨 多元配图 | 6 种配图策略 | 配图失败时明确报告错误 |
 | 📡 实时流式输出 | SSE 推送大纲/正文创作过程 | 所见即所得 |
 | 🧑‍💻 人机协作 | 三阶段创作，每步可介入 | 创作可控 |
 | ⚡ 异步高性能 | FastAPI 全异步栈 + Redis 缓存 | 响应迅速 |
@@ -42,9 +45,9 @@ AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文�
 
 | 智能体 | 功能 | 说明 |
 |--------|------|------|
-| Agent 1 | 标题生成 | 根据选题生成 3-5 个标题方案供用户选择 |
-| Agent 2 | 大纲生成 | 根据标题生成文章大纲（流式输出） |
-| Agent 3 | 正文生成 | 根据大纲生成 Markdown 正文（流式输出） |
+| Agent 1 | 标题生成 | 根据主题、产品和平台上下文生成标题方案 |
+| Agent 2 | 内容结构 | 根据标题、平台形式生成结构（流式输出） |
+| Agent 3 | 营销内容生成 | 根据平台和产品档案生成图文或视频脚本；可调用检索工具 |
 | Agent 4 | 配图分析 | 分析正文内容，生成配图需求 |
 | Agent 5 | 配图生成 | 按策略并行获取图片并上传到 COS |
 | 合成 | 合并图文 | 将配图按占位符插入正文生成完整图文 |
@@ -58,12 +61,11 @@ AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文�
 | Pexels | 高质量图库检索 | 关键词检索 |
 | Mermaid | 流程图/架构图生成 | AI Prompt 生成 |
 | Iconify | 图标库检索 | 关键词检索 |
-| 表情包 | Bing 图片搜索 | 关键词检索 |
+| 表情包 | Bing 图片搜索 | AI 工具检索候选图 |
 | Nano Banana | Gemini AI 生图 | AI Prompt 生成 |
 | SVG Diagram | AI 概念示意图 | AI Prompt 生成 |
-| Picsum | 随机图片 | 降级方案（自动触发） |
 
-> 当配图方式失败时，系统会自动降级到 Picsum 随机图片，确保文章生成不中断。
+> 配图服务不可用、请求失败或存储失败时会明确报错，不会以随机图片替代。单张配图失败不影响其他配图，成功结果保留，失败项记录完整异常；全部配图失败时任务报错。
 
 ### 文章风格
 
@@ -78,6 +80,7 @@ AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文�
 
 | 消息类型 | 说明 |
 |---------|------|
+| `AGENT_REASONING_STREAMING` | 模型返回的实时推理内容（标题、大纲、正文、配图分析、SVG 配图和 AI 修改大纲） |
 | `AGENT1_COMPLETE` | 标题方案生成完成 |
 | `AGENT2_STREAMING` | 大纲流式输出中 |
 | `AGENT2_COMPLETE` | 大纲生成完成 |
@@ -95,6 +98,15 @@ AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文�
 - ✅ Markdown 导出
 - ✅ 智能体执行日志追踪与耗时统计
 - ✅ 管理后台（用户管理、数据统计分析）
+- ✅ 产品档案文档导入（DOCX、Markdown、PPT、PPTX；旧版 PPT 需要 LibreOffice）
+- ✅ 小红书、微信公众号、抖音平台规则资料及编辑
+- ✅ 营销效果 mock 数据仪表盘和 AI 分析
+
+### Agent 与工具
+
+`app/agent/runtime.py` 提供可复用的 `Agent`、`AgentTool`、`AgentContext` 和 `AgentRunner`。运行器支持函数工具调用、流式输出和智能体交接，沿用现有 OpenAI Chat Completions 配置。设计参考 [OpenAI Agents SDK 的 Agent、工具和多智能体交接模式](https://openai.github.io/openai-agents-python/multi_agent/)。产品档案整理、营销内容生成和营销效果分析都使用这一运行时。
+
+内容 Agent 可使用互联网搜索、图片搜索、产品档案/历史营销资料检索和营销效果数据读取工具。
 
 ## 🛠 技术栈
 
@@ -137,6 +149,8 @@ AI 爆款文章创作器是一个基于 **多智能体协作** 的智能图文�
 - Redis 7.x
 
 ### 1. 初始化数据库（Windows）
+
+全新或已有数据库都执行 `tools/init_database.sql`；脚本会创建营销资料表，并为已有文章表补齐产品和平台关联字段。
 
 运行根目录的 [初始化数据库.bat](初始化数据库.bat)，脚本会：
 
@@ -229,7 +243,7 @@ npm run dev
 │   │   ├── article_service.py         # 文章状态流转
 │   │   ├── article_async_service.py   # 异步阶段任务
 │   │   ├── image_service_strategy.py  # 配图策略选择器
-│   │   ├── pexels / mermaid / iconify / emoji_pack / nano_banana / svg_diagram_service.py
+│   │   ├── pexels / mermaid / iconify / meme_service / nano_banana / svg_diagram_service.py
 │   │   ├── cos_service.py             # COS 上传
 │   │   ├── user_service.py / statistics_service.py
 │   │   └── agent_log_service.py       # 智能体执行日志
@@ -312,7 +326,7 @@ class ImageMethodEnum(str, Enum):
     NANO_BANANA = "NANO_BANANA"
     MERMAID = "MERMAID"
     ICONIFY = "ICONIFY"
-    EMOJI_PACK = "EMOJI_PACK"
+    MEME = "MEME"
     SVG_DIAGRAM = "SVG_DIAGRAM"
     PICSUM = "PICSUM"       # 降级方案
 ```
@@ -350,3 +364,5 @@ class NewMethodService(ImageSearchService):
 1. 在 `ArticleStyleEnum` 添加枚举值
 2. 在 `app/constants/prompt.py` 添加对应的 Prompt 附加内容
 3. 在 `ArticleAgentService._get_style_prompt()` 添加映射
+
+效果统计使用 `app/services/marketing_analytics_service.py` 中的 mock 数据；该数据同时提供给仪表盘和 AI 工具。

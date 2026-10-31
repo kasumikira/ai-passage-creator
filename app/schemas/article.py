@@ -11,6 +11,8 @@ class ArticleCreateRequest(BaseModel):
 
     topic: str = Field(..., min_length=1, description="选题")
     style: Optional[str] = Field(None, description="文章风格：tech/emotional/educational/humorous")
+    product_id: Optional[int] = Field(None, alias="productId", description="产品档案 ID")
+    platform_id: int = Field(..., alias="platformId", ge=1, description="营销平台 ID")
     enabled_image_methods: Optional[List[str]] = Field(
         None,
         alias="enabledImageMethods",
@@ -44,6 +46,8 @@ class ArticleVO(BaseModel):
     id: int
     task_id: str = Field(..., alias="taskId")
     user_id: int = Field(..., alias="userId")
+    product_id: Optional[int] = Field(None, alias="productId")
+    platform_id: Optional[int] = Field(None, alias="platformId")
     topic: str
     user_description: Optional[str] = Field(None, alias="userDescription")
     style: Optional[str] = None
@@ -92,14 +96,15 @@ class OutlineResult(BaseModel):
 
 
 class ImageRequirement(BaseModel):
-    """配图需求（新增 imageSource、prompt、placeholderId）"""
+    """配图需求；表情包来源只需要保存工具返回的 memeId。"""
 
     position: int
     type: str
     section_title: str = Field(..., alias="sectionTitle")
-    keywords: str
+    keywords: Optional[str] = None
     image_source: str = Field(..., alias="imageSource", description="图片来源")
     prompt: str = Field(default="", description="AI 生图提示词")
+    meme_id: Optional[str] = Field(None, alias="memeId", description="表情包候选 ID")
     placeholder_id: str = Field(..., alias="placeholderId", description="占位符ID")
 
     class Config:
@@ -146,9 +151,14 @@ class ArticleState:
         self.outline: Optional[OutlineResult] = None
         self.content: Optional[str] = None
         self.image_requirements: Optional[List[ImageRequirement]] = None
+        self.meme_candidates: dict[str, dict[str, str]] = {}
         self.images: Optional[List[ImageResult]] = None
         self.cover_image: Optional[str] = None
         self.full_content: Optional[str] = None
+        self.owner_id: Optional[int] = None
+        self.product_id: Optional[int] = None
+        self.platform_id: Optional[int] = None
+        self.marketing_context: Optional[str] = None
 
 
 class ArticleConfirmTitleRequest(BaseModel):
