@@ -208,6 +208,11 @@ class ArticleAsyncService:
         if message.startswith(tool_call_prefix):
             tool_event = json.loads(message[len(tool_call_prefix):])
             return {"type": SseMessageTypeEnum.TOOL_CALL.value, **tool_event}
+
+        progress_prefix = SseMessageTypeEnum.AGENT_PROGRESS.get_streaming_prefix()
+        if message.startswith(progress_prefix):
+            progress_event = json.loads(message[len(progress_prefix):])
+            return {"type": SseMessageTypeEnum.AGENT_PROGRESS.value, **progress_event}
         
         if message.startswith(image_complete_prefix):
             image_json = message[len(image_complete_prefix):]

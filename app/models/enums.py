@@ -115,6 +115,9 @@ class SseMessageTypeEnum(str, Enum):
     # 智能体工具调用
     TOOL_CALL = "TOOL_CALL"
 
+    # 智能体进度摘要（仅面向用户的简短状态，不包含内部推理文本）
+    AGENT_PROGRESS = "AGENT_PROGRESS"
+
     # 智能体3完成（生成正文）
     AGENT3_COMPLETE = "AGENT3_COMPLETE"
 

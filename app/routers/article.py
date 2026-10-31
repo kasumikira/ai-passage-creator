@@ -53,6 +53,7 @@ async def create_article(
     )
     
     # 异步执行阶段1：生成标题方案
+    sse_emitter_manager.prepare(task_id)
     asyncio.create_task(
         article_async_service.execute_phase1(
             task_id,

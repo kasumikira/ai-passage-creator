@@ -344,20 +344,36 @@
 
         <!-- 实时执行日志 -->
         <div v-if="realtimeLogs.length > 0" class="panel-section realtime-logs-section">
-          <h4 class="panel-title">
-            <FileTextOutlined />
-            执行日志
-          </h4>
-          <div class="logs-container">
-            <div
-              v-for="(log, index) in realtimeLogs"
-              :key="index"
-              :class="['log-entry', log.level]"
-            >
-              <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
-              <span class="log-message">{{ log.message }}</span>
-            </div>
+          <div class="process-heading">
+            <h4 class="panel-title">
+              <ThunderboltOutlined />
+              AI 思考摘要与工具调用
+            </h4>
+            <button type="button" class="process-toggle" @click="processExpanded = !processExpanded">
+              {{ processExpanded ? '收起过程' : '查看过程' }}
+            </button>
           </div>
+          <div
+            v-if="activeAgentProgress"
+            :class="['process-summary', activeAgentProgress.status]"
+          >
+            <LoadingOutlined v-if="activeAgentProgress.status === 'started'" class="process-spinner" />
+            <CheckCircleOutlined v-else-if="activeAgentProgress.status === 'completed'" />
+            <CloseCircleOutlined v-else />
+            <span><strong>{{ activeAgentProgress.title }}</strong> · {{ activeAgentProgress.summary }}</span>
+          </div>
+          <Transition name="expand">
+            <div v-show="processExpanded" ref="logsContainerRef" class="logs-container">
+              <div
+                v-for="(log, index) in realtimeLogs"
+                :key="index"
+                :class="['log-entry', log.level, log.kind]"
+              >
+                <span class="log-time">{{ formatLogTime(log.timestamp) }}</span>
+                <span class="log-message">{{ log.message }}</span>
+              </div>
+            </div>
+          </Transition>
         </div>
 
         <!-- 当前选题提示 -->
@@ -522,6 +538,7 @@ import {
   LoadingOutlined,
   CheckCircleOutlined,
   CheckCircleFilled,
+  CloseCircleOutlined,
   CopyOutlined,
   EyeOutlined,
   RedoOutlined,
@@ -556,6 +573,14 @@ const agentSteps = [
   { title: '生成配图', description: '自动匹配高清无版权图片' },
   { title: '图文合成', description: '将配图插入正文，完美呈现' },
 ]
+const agentStepIndexes: Record<string, number> = {
+  agent1_generate_titles: 0,
+  agent2_generate_outline: 1,
+  agent3_generate_content: 2,
+  agent4_analyze_image_requirements: 3,
+  agent5_generate_images: 4,
+  agent6_merge_content: 5,
+}
 
 // 示例选题
 const exampleTopics = [
@@ -588,12 +613,21 @@ const taskId = ref('')
 const errorVisible = ref(false)
 const errorMessage = ref('')
 const confirmLoading = ref(false)
+const processExpanded = ref(false)
+const logsContainerRef = ref<HTMLElement | null>(null)
+const activeAgentProgress = ref<{
+  agent: string
+  title: string
+  status: 'started' | 'completed' | 'failed'
+  summary: string
+} | null>(null)
 
 // 实时日志
 interface RealtimeLog {
   timestamp: number
   level: string
   message: string
+  kind?: 'progress' | 'tool' | 'activity'
 }
 const realtimeLogs = ref<RealtimeLog[]>([])
 const toolLabels: Record<string, string> = {
@@ -703,6 +737,8 @@ const startCreate = async () => {
   isCreating.value = true
   currentStep.value = 0
   realtimeLogs.value = []
+  activeAgentProgress.value = null
+  processExpanded.value = true
   addLog('开始创建文章任务...', 'info')
 
   try {
@@ -739,16 +775,20 @@ const startCreate = async () => {
 }
 
 // 添加日志
-const addLog = (message: string, level: string = 'info') => {
+const addLog = (message: string, level: string = 'info', kind: RealtimeLog['kind'] = 'activity') => {
   realtimeLogs.value.push({
     timestamp: Date.now(),
     level,
-    message
+    message,
+    kind,
   })
   // 限制日志数量，最多保留 50 条
   if (realtimeLogs.value.length > 50) {
     realtimeLogs.value.shift()
   }
+  nextTick(() => {
+    logsContainerRef.value?.scrollTo({ top: logsContainerRef.value.scrollHeight })
+  })
 }
 
 // 格式化日志时间
@@ -762,6 +802,33 @@ const handleSSEMessage = (msg: SSEMessage) => {
   console.log('SSE消息:', msg)
 
   switch (msg.type) {
+    case 'AGENT_PROGRESS': {
+      const status = msg.status === 'completed' ? 'completed' : 'started'
+      const progress = {
+        agent: msg.agent || '',
+        title: msg.title || 'AI 处理',
+        status,
+        summary: msg.summary || '',
+      }
+      activeAgentProgress.value = progress
+      processExpanded.value = status === 'started'
+      if (status === 'started') {
+        currentStep.value = agentStepIndexes[msg.agent] ?? currentStep.value
+        currentPhase.value = msg.agent === 'agent1_generate_titles'
+          ? 'TITLE_GENERATING'
+          : msg.agent === 'agent2_generate_outline'
+            ? 'OUTLINE_GENERATING'
+            : 'CONTENT_GENERATING'
+        isCreating.value = true
+      }
+      addLog(
+        `${status === 'started' ? '开始' : '完成'}${progress.title}：${progress.summary}`,
+        status === 'started' ? 'info' : 'success',
+        'progress',
+      )
+      break
+    }
+
     case 'AGENT1_COMPLETE':
       // 智能体1完成，进入标题生成阶段（显示加载）
       currentPhase.value = 'TITLE_GENERATING'
@@ -822,11 +889,12 @@ const handleSSEMessage = (msg: SSEMessage) => {
       const query = typeof rawQuery === 'string' ? rawQuery.trim() : ''
       const queryText = query ? `：${query.length > 120 ? `${query.slice(0, 120)}…` : query}` : ''
       if (msg.status === 'running') {
-        addLog(`正在调用${toolName}${queryText}`, 'info')
+        processExpanded.value = true
+        addLog(`正在调用${toolName}${queryText}`, 'info', 'tool')
       } else if (msg.status === 'completed') {
-        addLog(`${toolName}调用完成`, 'success')
+        addLog(`${toolName}调用完成`, 'success', 'tool')
       } else {
-        addLog(`${toolName}调用失败`, 'error')
+        addLog(`${toolName}调用失败`, 'error', 'tool')
       }
       break
     }
@@ -864,6 +932,8 @@ const handleSSEMessage = (msg: SSEMessage) => {
       currentPhase.value = 'COMPLETED'
       currentStep.value = 6
       isCompleted.value = true
+      isCreating.value = false
+      processExpanded.value = false
       message.success('文章创作完成!')
       addLog('✨ 文章创作完成！', 'success')
       break
@@ -873,6 +943,11 @@ const handleSSEMessage = (msg: SSEMessage) => {
       errorVisible.value = true
       isCreating.value = false
       currentPhase.value = 'INPUT'
+      if (activeAgentProgress.value?.status === 'started') {
+        activeAgentProgress.value.status = 'failed'
+        activeAgentProgress.value.summary = errorMessage.value
+      }
+      processExpanded.value = false
       addLog(`创作失败: ${msg.message || '未知错误'}`, 'error')
       break
   }
@@ -960,6 +1035,8 @@ const resetCreate = () => {
   isCompleted.value = false
   isStreaming.value = false
   isOutlineStreaming.value = false
+  processExpanded.value = false
+  activeAgentProgress.value = null
   currentStep.value = 0
   imageCount.value = 0
   imageProgress.value = 0
@@ -1712,6 +1789,77 @@ onBeforeUnmount(() => {
 
 /* 实时日志 */
 .realtime-logs-section {
+  .process-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    .panel-title {
+      margin-bottom: 10px;
+    }
+  }
+
+  .process-toggle {
+    border: 0;
+    padding: 4px 0 4px 8px;
+    background: transparent;
+    color: var(--color-primary-dark);
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .process-summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: var(--radius-md);
+    background: rgba(34, 197, 94, 0.08);
+    color: var(--color-primary-dark);
+    font-size: 11px;
+    line-height: 1.5;
+
+    .anticon {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    &.completed {
+      background: var(--color-background-secondary);
+      color: var(--color-text-secondary);
+    }
+
+    &.failed {
+      background: rgba(239, 68, 68, 0.05);
+      color: var(--color-error);
+    }
+  }
+
+  .process-spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  .expand-enter-active,
+  .expand-leave-active {
+    transition: opacity 0.18s ease, max-height 0.18s ease;
+    overflow: hidden;
+  }
+
+  .expand-enter-from,
+  .expand-leave-to {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  .expand-enter-to,
+  .expand-leave-from {
+    max-height: 340px;
+    opacity: 1;
+  }
+
   .logs-container {
     max-height: 300px;
     overflow-y: auto;
@@ -1747,6 +1895,16 @@ onBeforeUnmount(() => {
         }
         .log-message {
           color: var(--color-error);
+        }
+      }
+
+      &.tool {
+        background: rgba(34, 197, 94, 0.04);
+
+        .log-message::before {
+          content: '工具 · ';
+          color: var(--color-primary-dark);
+          font-weight: 600;
         }
       }
 
