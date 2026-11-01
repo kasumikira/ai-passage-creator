@@ -44,7 +44,7 @@
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.dataIndex === 'userAvatar'">
-              <a-avatar :src="record.userAvatar" :size="48" class="user-avatar" />
+              <UserAvatar :src="record.userAvatar" :size="48" class="user-avatar" />
             </template>
             <template v-else-if="column.dataIndex === 'userRole'">
               <a-tag v-if="record.userRole === 'admin'" color="purple" class="role-tag">
@@ -78,6 +78,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { deleteUser, listUserVoByPage } from '@/api/userController.ts'
 import { message } from 'ant-design-vue'
 import { SearchOutlined } from '@ant-design/icons-vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import dayjs from 'dayjs'
 
 const columns = [

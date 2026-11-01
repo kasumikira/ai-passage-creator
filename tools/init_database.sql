@@ -37,15 +37,15 @@ CREATE TABLE IF NOT EXISTS user
 -- 密码是 12345678（MD5 加密 + 盐值 yupi）
 -- 根据 userAccount 判断是否已存在；不指定 id，避免与现有用户主键冲突
 INSERT INTO user (userAccount, userPassword, userName, userAvatar, userProfile, userRole)
-SELECT 'admin', '10670d38ec32fa8102be6a37f8cb52bf', '管理员', 'https://www.codefather.cn/logo.png', '系统管理员', 'admin'
+SELECT 'admin', '10670d38ec32fa8102be6a37f8cb52bf', '管理员', '', '系统管理员', 'admin'
 WHERE NOT EXISTS (SELECT 1 FROM user WHERE userAccount = 'admin');
 
 INSERT INTO user (userAccount, userPassword, userName, userAvatar, userProfile, userRole)
-SELECT 'user', '10670d38ec32fa8102be6a37f8cb52bf', '普通用户', 'https://www.codefather.cn/logo.png', '我是一个普通用户', 'user'
+SELECT 'user', '10670d38ec32fa8102be6a37f8cb52bf', '普通用户', '', '我是一个普通用户', 'user'
 WHERE NOT EXISTS (SELECT 1 FROM user WHERE userAccount = 'user');
 
 INSERT INTO user (userAccount, userPassword, userName, userAvatar, userProfile, userRole)
-SELECT 'test', '10670d38ec32fa8102be6a37f8cb52bf', '测试账号', 'https://www.codefather.cn/logo.png', '这是一个测试账号', 'user'
+SELECT 'test', '10670d38ec32fa8102be6a37f8cb52bf', '测试账号', '', '这是一个测试账号', 'user'
 WHERE NOT EXISTS (SELECT 1 FROM user WHERE userAccount = 'test');
 
 -- 文章表
