@@ -64,12 +64,12 @@ export async function getUserVoById(
   })
 }
 
-/** 此处后端没有提供注释 POST /user/list/page/vo */
+/** 分页查询用户列表（管理员） POST /user/list/page */
 export async function listUserVoByPage(
   body: API.UserQueryRequest,
   options?: { [key: string]: any }
 ) {
-  return request<API.BaseResponsePageUserVO>('/user/list/page/vo', {
+  return request<API.BaseResponsePageUserVO>('/user/list/page', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

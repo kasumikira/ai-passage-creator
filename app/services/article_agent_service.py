@@ -31,6 +31,15 @@ from app.services.image_service_strategy import ImageServiceStrategy
 
 logger = logging.getLogger(__name__)
 
+# NANO_BANANA 暂不对外开放：前端不展示该选项，未显式指定配图方式时也不参与生成
+DEFAULT_IMAGE_METHODS: List[str] = [
+    ImageMethodEnum.PEXELS.value,
+    ImageMethodEnum.MERMAID.value,
+    ImageMethodEnum.ICONIFY.value,
+    ImageMethodEnum.MEME.value,
+    ImageMethodEnum.SVG_DIAGRAM.value,
+]
+
 
 class ArticleAgentService:
     """文章智能体编排服务"""
@@ -299,15 +308,15 @@ class ArticleAgentService:
             state.content = self._normalize_placeholder_syntax(agent4_result.content_with_placeholders)
 
             # 删除被禁用来源对应的占位符，避免正文残留无法生成的配图标记。
-            if state.enabled_image_methods:
-                disallowed_placeholders = [
-                    requirement.placeholder_id
-                    for requirement in agent4_result.image_requirements
-                    if requirement.image_source not in state.enabled_image_methods
-                ]
-                for placeholder_id in disallowed_placeholders:
-                    for candidate in self._build_placeholder_candidates(placeholder_id):
-                        state.content = state.content.replace(candidate, "")
+            allowed_methods = state.enabled_image_methods or DEFAULT_IMAGE_METHODS
+            disallowed_placeholders = [
+                requirement.placeholder_id
+                for requirement in agent4_result.image_requirements
+                if requirement.image_source not in allowed_methods
+            ]
+            for placeholder_id in disallowed_placeholders:
+                for candidate in self._build_placeholder_candidates(placeholder_id):
+                    state.content = state.content.replace(candidate, "")
 
             # 验证并过滤配图需求
             validated_requirements = self._validate_and_filter_image_requirements(
@@ -565,7 +574,6 @@ class ArticleAgentService:
     def _get_all_methods_description(self) -> str:
         """获取所有配图方式的完整描述"""
         return """   - PEXELS: 适合真实场景、产品照片、人物照片、自然风景等写实图片
-   - NANO_BANANA: 适合创意插画、信息图表、需要文字渲染、抽象概念、艺术风格等 AI 生成图片
    - MERMAID: 适合流程图、架构图、时序图、关系图、甘特图等结构化图表
    - ICONIFY: 适合图标、符号、小型装饰性图标（如：箭头、勾选、星星、心形等）
    - MEME: 适合表情包、搞笑图片、轻松幽默的配图；需要先调用表情包搜索工具
@@ -589,9 +597,7 @@ class ArticleAgentService:
     ) -> str:
         """构建配图方式的详细使用指南"""
         # 如果没有限制，返回所有方式的使用指南
-        methods_to_include = enabled_methods if enabled_methods else [
-            "PEXELS", "NANO_BANANA", "MERMAID", "ICONIFY", "MEME", "SVG_DIAGRAM"
-        ]
+        methods_to_include = enabled_methods if enabled_methods else DEFAULT_IMAGE_METHODS
 
         guides = []
         for method_str in methods_to_include:
@@ -621,15 +627,16 @@ class ArticleAgentService:
     ) -> List[ImageRequirement]:
         """验证并过滤配图需求"""
         validated_requirements = []
+        allowed_methods = enabled_methods or DEFAULT_IMAGE_METHODS
 
         for req in requirements:
             image_source = req.image_source
 
             # 验证 imageSource 是否在允许列表中
-            if enabled_methods and image_source not in enabled_methods:
+            if image_source not in allowed_methods:
                 logger.warning(
                     f"配图需求不符合限制被过滤, position={req.position}, "
-                    f"imageSource={image_source}, enabledMethods={enabled_methods}"
+                    f"imageSource={image_source}, enabledMethods={allowed_methods}"
                 )
                 continue
 

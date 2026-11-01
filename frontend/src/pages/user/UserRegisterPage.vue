@@ -8,16 +8,16 @@
           <div class="brand-logo">
             <img src="@/assets/logo.png" alt="Logo" class="logo-img" />
           </div>
-          <h1 class="brand-title">AI 爆款文章创作器</h1>
-          <p class="brand-subtitle">让每个人都能写出 10万+ 文章</p>
+          <h1 class="brand-title">AI 营销内容工作台</h1>
+          <p class="brand-subtitle">让每条内容都贴近产品、平台与受众</p>
           <div class="brand-features">
             <div class="feature-item">
               <CheckCircleOutlined class="feature-check" />
-              <span>智能生成标题与大纲</span>
+              <span>结合产品与平台生成标题</span>
             </div>
             <div class="feature-item">
               <CheckCircleOutlined class="feature-check" />
-              <span>流式生成高质量正文</span>
+              <span>流式生成平台适配内容</span>
             </div>
             <div class="feature-item">
               <CheckCircleOutlined class="feature-check" />

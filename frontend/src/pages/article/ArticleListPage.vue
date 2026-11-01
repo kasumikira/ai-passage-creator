@@ -222,7 +222,7 @@ const loadData = async () => {
   loading.value = true
   try {
     const res = await listArticle({
-      pageNum: pagination.value.current,
+      current: pagination.value.current,
       pageSize: pagination.value.pageSize,
       // 如果后端支持，可以传递搜索参数
       // keyword: searchKeyword.value,
@@ -253,7 +253,7 @@ const loadData = async () => {
     }
 
     dataSource.value = records
-    pagination.value.total = pageData?.totalRow || 0
+    pagination.value.total = pageData?.total || 0
   } catch (error: any) {
     message.error(error.message || '加载失败')
   } finally {

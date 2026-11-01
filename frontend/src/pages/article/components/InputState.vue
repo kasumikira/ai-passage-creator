@@ -2,15 +2,15 @@
   <div class="input-state">
     <div class="input-card">
       <div class="input-header">
-        <h1 class="input-title">创作新文章</h1>
-        <p class="input-subtitle">输入选题，AI 帮你生成爆款文章</p>
+        <h1 class="input-title">创作新内容</h1>
+        <p class="input-subtitle">输入营销主题，AI 帮你生成贴合平台的内容</p>
       </div>
 
       <div class="input-area">
         <a-textarea
           :value="topic"
           @update:value="$emit('update:topic', $event)"
-          placeholder="请输入您想创作的文章选题，例如：2026年AI如何改变职场"
+          placeholder="请输入本次的营销主题，例如：新品咖啡机在小红书的种草笔记"
           :rows="6"
           :maxlength="MAX_TOPIC_LENGTH"
           show-count

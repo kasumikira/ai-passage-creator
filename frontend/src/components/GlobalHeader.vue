@@ -28,9 +28,13 @@
         <div v-if="loginUserStore.loginUser.id" class="user-dropdown">
           <a-dropdown>
             <a-space class="user-info">
-              <a-avatar :src="loginUserStore.loginUser.userAvatar" :size="36" class="user-avatar" />
+              <UserAvatar
+                :src="loginUserStore.loginUser.userAvatar"
+                :size="36"
+                class="user-avatar"
+              />
               <span class="user-name">
-                {{ loginUserStore.loginUser.userName ?? '无名' }}
+                {{ loginUserStore.loginUser.userAccount }}
               </span>
             </a-space>
             <template #overlay>
@@ -67,6 +71,7 @@ import {
   DatabaseOutlined,
   LineChartOutlined,
 } from '@ant-design/icons-vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const loginUserStore = useLoginUserStore()
 const router = useRouter()
