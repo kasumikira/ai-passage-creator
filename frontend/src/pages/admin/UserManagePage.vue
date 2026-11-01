@@ -18,9 +18,6 @@
             <a-form-item label="账号">
               <a-input v-model:value="searchParams.userAccount" placeholder="输入账号" class="search-input" />
             </a-form-item>
-            <a-form-item label="用户名">
-              <a-input v-model:value="searchParams.userName" placeholder="输入用户名" class="search-input" />
-            </a-form-item>
             <a-form-item>
               <a-button type="primary" html-type="submit" class="search-btn">
                 <template #icon>
@@ -91,16 +88,8 @@ const columns = [
     dataIndex: 'userAccount',
   },
   {
-    title: '用户名',
-    dataIndex: 'userName',
-  },
-  {
     title: '头像',
     dataIndex: 'userAvatar',
-  },
-  {
-    title: '简介',
-    dataIndex: 'userProfile',
   },
   {
     title: '用户角色',
@@ -122,7 +111,7 @@ const total = ref(0)
 
 // 搜索条件
 const searchParams = reactive<API.UserQueryRequest>({
-  pageNum: 1,
+  current: 1,
   pageSize: 10,
 })
 
@@ -133,7 +122,7 @@ const fetchData = async () => {
   })
   if (res.data.data) {
     data.value = res.data.data.records ?? []
-    total.value = res.data.data.totalRow ?? 0
+    total.value = res.data.data.total ?? 0
   } else {
     message.error('获取数据失败，' + res.data.message)
   }
@@ -142,7 +131,7 @@ const fetchData = async () => {
 // 分页参数
 const pagination = computed(() => {
   return {
-    current: searchParams.pageNum ?? 1,
+    current: searchParams.current ?? 1,
     pageSize: searchParams.pageSize ?? 10,
     total: total.value,
     showSizeChanger: true,
@@ -152,7 +141,7 @@ const pagination = computed(() => {
 
 // 表格分页变化时的操作
 const doTableChange = (page: { current: number; pageSize: number }) => {
-  searchParams.pageNum = page.current
+  searchParams.current = page.current
   searchParams.pageSize = page.pageSize
   fetchData()
 }
@@ -160,7 +149,7 @@ const doTableChange = (page: { current: number; pageSize: number }) => {
 // 搜索数据
 const doSearch = () => {
   // 重置页码
-  searchParams.pageNum = 1
+  searchParams.current = 1
   fetchData()
 }
 

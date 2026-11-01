@@ -51,7 +51,7 @@ declare namespace API {
   }
 
   type ArticleQueryRequest = {
-    pageNum?: number
+    current?: number
     pageSize?: number
     sortField?: string
     sortOrder?: string
@@ -218,20 +218,16 @@ declare namespace API {
 
   type PageArticleVO = {
     records?: ArticleVO[]
-    pageNumber?: number
-    pageSize?: number
-    totalPage?: number
-    totalRow?: number
-    optimizeCountQuery?: boolean
+    total?: number
+    current?: number
+    size?: number
   }
 
   type PageUserVO = {
     records?: UserVO[]
-    pageNumber?: number
-    pageSize?: number
-    totalPage?: number
-    totalRow?: number
-    optimizeCountQuery?: boolean
+    total?: number
+    current?: number
+    size?: number
   }
 
   type SseEmitter = {
@@ -282,7 +278,7 @@ declare namespace API {
   }
 
   type UserQueryRequest = {
-    pageNum?: number
+    current?: number
     pageSize?: number
     sortField?: string
     sortOrder?: string
