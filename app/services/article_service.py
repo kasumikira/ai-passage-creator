@@ -85,11 +85,16 @@ class ArticleService:
         query = select(Article).where(and_(Article.task_id == task_id, Article.is_delete == 0))
         return await self.db.fetch_one(query)
 
-    async def get_article_detail(self, task_id: str, login_user: LoginUserVO) -> ArticleVO:
-        """获取文章详情"""
+    async def require_article_access(self, task_id: str, login_user: LoginUserVO):
+        """Verify that a user may read this article and return its row."""
         article = await self.get_by_task_id(task_id)
         throw_if_not(article, ErrorCode.NOT_FOUND_ERROR, "文章不存在")
         self._check_article_permission(article, login_user)
+        return article
+
+    async def get_article_detail(self, task_id: str, login_user: LoginUserVO) -> ArticleVO:
+        """获取文章详情"""
+        article = await self.require_article_access(task_id, login_user)
         return self._to_article_vo(article)
 
     async def list_article_by_page(

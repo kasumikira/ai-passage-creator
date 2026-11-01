@@ -7,6 +7,7 @@ from collections.abc import Coroutine
 from typing import Any, Dict, Optional
 
 from app.schemas.article import ArticleState, OutlineSection, OutlineResult, TitleResult
+from app.agent.provenance import MaterialInput
 from app.models.enums import ArticlePhaseEnum, ArticleStatusEnum, SseMessageTypeEnum
 from app.services.article_agent_service import ArticleAgentService
 from app.services.article_service import ArticleService
@@ -203,6 +204,16 @@ class ArticleAsyncService:
             state.product_id,
         )
         state.marketing_context = context["prompt"]
+        state.marketing_sources = [
+            MaterialInput(
+                source_type=source_type,
+                source_ref=f"{source_type}:{context[key]['id']}",
+                content=context[key],
+                summary=f"{source_type}: {context[key]['name']}",
+            )
+            for key, source_type in (("platform", "marketing_platform"), ("product", "product_profile"))
+            if context[key] is not None
+        ]
     
     def _build_message_data(self, message: str, state: ArticleState) -> Optional[Dict[str, Any]]:
         """构建消息数据"""

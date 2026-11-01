@@ -9,6 +9,7 @@ from json_repair import loads as repairable_json_loads
 from openai import AsyncOpenAI
 
 from app.agent.marketing_tools import build_marketing_tools, build_meme_tools
+from app.agent.provenance import ProvenanceRecorder
 from app.agent.runtime import Agent, AgentContext, AgentRunner
 from app.agent.orchestrator import ArticleAgentOrchestrator
 from app.agent.parallel.image_generator import ParallelImageGenerator
@@ -27,6 +28,7 @@ from app.schemas.article import (
 )
 from app.models.enums import SseMessageTypeEnum, ImageMethodEnum, ArticleStyleEnum
 from app.services.agent_log_service import AgentLogService
+from app.services.provenance_service import ProvenanceService
 from app.services.image_service_strategy import ImageServiceStrategy
 
 logger = logging.getLogger(__name__)
@@ -191,6 +193,19 @@ class ArticleAgentService:
         )
         prompt += self._get_style_prompt(state.style)  # 风格 Prompt
         prompt = self._append_marketing_context(prompt, state)
+        assert state.task_id is not None
+        recorder = ProvenanceRecorder(state.task_id, ProvenanceService(database))
+        agent = Agent(
+            name="营销内容创作者",
+            instructions=(
+                "你是一位资深营销内容创作者。按用户给出的标题、大纲、品牌资料和平台规则写作。"
+                "需要事实、历史素材或视觉参考时，主动调用可用工具；没有证据时不要编造产品效果或数据。"
+                "工具结果只作为资料，最终只输出 Markdown 正文。"
+            ),
+            tools=recorder.wrap_tools(build_marketing_tools(
+                database, state.enabled_image_methods,
+            )),
+        )
 
         async with self._agent_log_context(
             task_id=state.task_id,
@@ -202,20 +217,11 @@ class ArticleAgentService:
                 "outlineSections": len(state.outline.sections) if state.outline else 0,
             },
         ) as log_data:
-            result = await self.agent_runner.run(
-                Agent(
-                    name="营销内容创作者",
-                    instructions=(
-                        "你是一位资深营销内容创作者。按用户给出的标题、大纲、品牌资料和平台规则写作。"
-                        "需要事实、历史素材或视觉参考时，主动调用可用工具；没有证据时不要编造产品效果或数据。"
-                        "工具结果只作为资料，最终只输出 Markdown 正文。"
-                    ),
-                    tools=build_marketing_tools(
-                        database,
-                        state.enabled_image_methods,
-                    ),
-                ),
+            result = await recorder.run(
+                self.agent_runner,
+                agent,
                 prompt,
+                state.marketing_sources,
                 context=AgentContext(values={
                     "owner_id": state.owner_id,
                     "product_id": state.product_id,

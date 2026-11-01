@@ -115,6 +115,38 @@
 
           <a-divider v-if="executionStats && executionStats.logs && executionStats.logs.length > 0" />
 
+          <section class="provenance-section">
+            <h2 class="section-title">生成依据与工具记录</h2>
+            <p class="provenance-note">记录提供给正文 Agent 的资料和工具返回内容；版本为内容哈希前 12 位，不表示每句话都引用了这些资料。</p>
+            <div v-if="provenanceEvents.length" class="provenance-list">
+              <div v-for="event in provenanceEvents" :key="event.id" class="provenance-item">
+                <div class="provenance-heading">
+                  <strong>{{ event.eventType === 'TOOL' ? `工具 · ${event.toolName}` : event.sourceType === 'agent_instruction' ? '写作指令' : event.sourceType === 'agent_prompt' ? '写作输入' : '提供资料' }}</strong>
+                  <a-tag :color="event.status === 'FAILED' ? 'red' : 'green'">{{ event.status }}</a-tag>
+                </div>
+                <p>{{ event.summary || event.resultSummary }}</p>
+                <small v-if="event.sourceRef">来源 {{ event.sourceRef }} · 版本 {{ event.versionTag }}</small>
+                <small v-if="event.sourceRefs?.length">返回来源 {{ event.sourceRefs.join('、') }}</small>
+                <small v-if="event.eventType === 'TOOL' && event.arguments">参数 {{ JSON.stringify(event.arguments) }}</small>
+                <small v-if="event.errorMessage">错误 {{ event.errorMessage }}</small>
+                <small>{{ formatDate(event.createTime) }}<span v-if="event.durationMs !== null"> · {{ event.durationMs }}ms</span></small>
+                <a-button v-if="event.snapshotId" type="link" size="small" @click="showMaterial(event.snapshotId)">
+                  查看资料版本 #{{ event.snapshotId }}
+                </a-button>
+              </div>
+            </div>
+            <a-empty v-else description="暂无正文生成依据记录" />
+          </section>
+          <a-modal v-model:open="materialOpen" title="资料版本" :footer="null" width="800px">
+            <template v-if="selectedMaterial">
+              <p>{{ selectedMaterial.sourceRef }} · 版本 {{ selectedMaterial.versionTag }}</p>
+              <small>SHA-256: {{ selectedMaterial.contentHash }}</small>
+              <pre class="material-content">{{ selectedMaterial.contentText }}</pre>
+            </template>
+          </a-modal>
+
+          <a-divider />
+
           <!-- 大纲 -->
           <div v-if="article.outline && article.outline.length > 0" class="outline-section">
             <h2 class="section-title">
@@ -195,6 +227,7 @@ import {
   ThunderboltOutlined
 } from '@ant-design/icons-vue'
 import { getArticle, getExecutionLogs } from '@/api/articleController'
+import { getArticleTrace, getArticleMaterial, type ProvenanceEvent, type MaterialSnapshot } from '@/api/provenance'
 import { exportAsMarkdown, getStatusText, getStatusTagColor as getStatusColor } from '@/utils/article'
 import { markdownToHtml, resolveArticleImageUrl } from '@/utils/markdown'
 import { formatDateFull as formatDate } from '@/utils/date'
@@ -207,6 +240,9 @@ const article = ref<API.ArticleVO | null>(null)
 const executionStats = ref<API.AgentExecutionStats | null>(null)
 const logsLoading = ref(false)
 const showExecutionLogs = ref(false)
+const provenanceEvents = ref<ProvenanceEvent[]>([])
+const selectedMaterial = ref<MaterialSnapshot | null>(null)
+const materialOpen = ref(false)
 
 // 加载文章
 const loadArticle = async () => {
@@ -222,6 +258,7 @@ const loadArticle = async () => {
     article.value = res.data.data || null
     // 自动加载执行日志
     await loadExecutionLogs(taskId)
+    await loadProvenance(taskId)
   } catch (error) {
     message.error((error as Error).message || '加载失败')
   } finally {
@@ -239,6 +276,27 @@ const loadExecutionLogs = async (taskId: string) => {
     console.error('加载执行日志失败:', error)
   } finally {
     logsLoading.value = false
+  }
+}
+
+const loadProvenance = async (taskId: string) => {
+  try {
+    const response = await getArticleTrace(taskId)
+    if (response.data.code === 0) provenanceEvents.value = response.data.data || []
+  } catch (error) {
+    console.error('加载生成依据失败:', error)
+  }
+}
+
+const showMaterial = async (snapshotId: number) => {
+  try {
+    const taskId = route.params.taskId as string
+    const response = await getArticleMaterial(taskId, snapshotId)
+    if (response.data.code !== 0) throw new Error(response.data.message)
+    selectedMaterial.value = response.data.data
+    materialOpen.value = true
+  } catch (error) {
+    message.error((error as Error).message || '资料版本加载失败')
   }
 }
 
@@ -818,4 +876,15 @@ onMounted(() => {
     }
   }
 }
+</style>
+
+<style scoped>
+.provenance-section { margin: 24px 0; }
+.provenance-note { color: #64748b; font-size: 13px; margin: 8px 0 16px; }
+.provenance-list { display: grid; gap: 12px; }
+.provenance-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
+.provenance-heading { display: flex; align-items: center; gap: 10px; }
+.provenance-item p { margin: 6px 0; }
+.provenance-item small { display: block; color: #64748b; overflow-wrap: anywhere; }
+.material-content { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 60vh; overflow-y: auto; }
 </style>

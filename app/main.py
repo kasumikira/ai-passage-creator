@@ -14,6 +14,7 @@ from app.routers import (
     statistics_router,
     marketing_router,
 )
+from app.routers.provenance import router as provenance_router
 from app.exceptions import BusinessException, ErrorCode
 from app.utils.session import init_redis, close_redis
 
@@ -85,6 +86,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(health_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(article_router, prefix="/api")
+app.include_router(provenance_router, prefix="/api")
 app.include_router(statistics_router, prefix="/api")
 app.include_router(marketing_router, prefix="/api")
 

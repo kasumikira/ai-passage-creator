@@ -91,6 +91,7 @@ class AgentRunner:
         stream_handler: Optional[Callable[[str], None]] = None,
         reasoning_stream_handler: Optional[Callable[[str], None]] = None,
         tool_event_handler: Optional[ToolEventHandler] = None,
+        first_response_handler: Optional[Callable[[], Awaitable[None]]] = None,
     ) -> AgentRunResult:
         context = context or AgentContext()
         current_agent = agent
@@ -100,6 +101,13 @@ class AgentRunner:
         ]
         tool_call_count = 0
         handoffs: list[str] = []
+        first_response_recorded = False
+
+        async def record_first_response():
+            nonlocal first_response_recorded
+            if first_response_handler and not first_response_recorded:
+                await first_response_handler()
+                first_response_recorded = True
 
         def emit_tool_event(
             name: str,
@@ -133,6 +141,7 @@ class AgentRunner:
                     request,
                     stream_handler,
                     reasoning_stream_handler,
+                    record_first_response,
                 )
                 assistant_message: dict[str, Any] = {
                     "role": "assistant",
@@ -153,6 +162,8 @@ class AgentRunner:
                     assistant_message["reasoning_content"] = reasoning_content
                 if calls:
                     assistant_message["tool_calls"] = calls
+
+            await record_first_response()
 
             messages.append(assistant_message)
             if not calls:
@@ -230,13 +241,18 @@ class AgentRunner:
         request: dict[str, Any],
         stream_handler: Optional[Callable[[str], None]],
         reasoning_stream_handler: Optional[Callable[[str], None]] = None,
+        first_chunk_handler: Optional[Callable[[], Awaitable[None]]] = None,
     ):
         stream = await self.client.chat.completions.create(**request)
         content_parts: list[str] = []
         reasoning_parts: list[str] = []
         calls: dict[int, dict[str, Any]] = {}
 
+        first_chunk_seen = False
         async for chunk in stream:
+            if first_chunk_handler and not first_chunk_seen:
+                await first_chunk_handler()
+                first_chunk_seen = True
             choice = chunk.choices[0]
             delta = choice.delta
             reasoning_delta = getattr(delta, "reasoning_content", None)

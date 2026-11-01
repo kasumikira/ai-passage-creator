@@ -196,3 +196,37 @@ CREATE TABLE IF NOT EXISTS agent_log
     INDEX idx_createTime (createTime)
 ) COMMENT '智能体执行日志表' COLLATE = utf8mb4_unicode_ci;
 
+
+-- Immutable, content-addressed versions of materials delivered to the content agent.
+CREATE TABLE IF NOT EXISTS material_snapshot
+(
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    sourceType  VARCHAR(40)  NOT NULL,
+    sourceRef   VARCHAR(255) NOT NULL,
+    versionTag  CHAR(12)     NOT NULL COMMENT 'First 12 characters of SHA-256 content hash',
+    contentHash CHAR(64)     NOT NULL,
+    contentText LONGTEXT     NOT NULL,
+    summary     VARCHAR(500) NOT NULL,
+    createTime  DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE KEY uk_material_version (sourceType, sourceRef, contentHash)
+) COLLATE = utf8mb4_unicode_ci;
+
+-- One ordered record per provided material or content-agent tool call.
+CREATE TABLE IF NOT EXISTS article_provenance_event
+(
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    taskId        VARCHAR(64)  NOT NULL,
+    eventType     VARCHAR(20)  NOT NULL,
+    snapshotId    BIGINT       NULL,
+    toolName      VARCHAR(100) NULL,
+    arguments     JSON         NULL,
+    status        VARCHAR(20)  NOT NULL,
+    resultSummary VARCHAR(500) NOT NULL,
+    errorMessage  TEXT         NULL,
+    sourceRefs    JSON         NULL,
+    durationMs    INT          NULL,
+    createTime    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    INDEX idx_article_provenance_task (taskId, id),
+    CONSTRAINT fk_article_provenance_task FOREIGN KEY (taskId) REFERENCES article (taskId) ON DELETE CASCADE,
+    CONSTRAINT fk_article_provenance_snapshot FOREIGN KEY (snapshotId) REFERENCES material_snapshot (id)
+) COLLATE = utf8mb4_unicode_ci;
