@@ -70,19 +70,19 @@ const features = [
   {
     icon: FileTextOutlined,
     title: '智能生成标题',
-    description: 'AI 自动分析选题，生成吸引眼球的爆款标题',
+    description: '结合产品卖点与平台风格，生成更抓人的标题',
     color: '#22C55E'
   },
   {
     icon: OrderedListOutlined,
-    title: '自动生成大纲',
-    description: '智能规划文章结构，确保逻辑清晰完整',
+    title: '自动规划结构',
+    description: '按渠道内容形式规划结构，逻辑清晰完整',
     color: '#3B82F6'
   },
   {
     icon: EditOutlined,
-    title: '流式生成正文',
-    description: '实时展示创作过程，体验打字机般的流畅输出',
+    title: '流式生成内容',
+    description: '实时展示生成过程，边写边看随时介入',
     color: '#8B5CF6'
   },
   {
@@ -94,7 +94,7 @@ const features = [
   {
     icon: ThunderboltOutlined,
     title: '快速高效',
-    description: '5-10分钟完成全文创作，效率提升10倍',
+    description: '5-10 分钟完成从标题到图文的全流程',
     color: '#EF4444'
   },
   {
@@ -127,7 +127,7 @@ onMounted(() => {
         <div class="input-wrapper">
           <a-input
             v-model:value="topic"
-            placeholder="输入您想创作的文章选题，例如：2026年AI如何改变职场"
+            placeholder="输入本次的营销主题，例如：新品咖啡机在小红书的种草笔记"
             size="large"
             class="topic-input"
             @pressEnter="goToCreate"
@@ -142,7 +142,7 @@ onMounted(() => {
           </a-button>
         </div>
 
-        <p class="hero-tips">工作总结、心得体会、演讲稿、分析报告... 一键生成</p>
+        <p class="hero-tips">小红书笔记、公众号推文、抖音口播脚本、活动预热文案... 一键生成</p>
       </div>
     </div>
 
@@ -151,8 +151,8 @@ onMounted(() => {
       <div class="container">
         <div class="section-header">
           <div class="section-badge">核心能力</div>
-          <h2 class="section-title">专业人士的一站式AI写作工具</h2>
-          <p class="section-subtitle">强大的 AI 能力，让创作变得简单高效</p>
+          <h2 class="section-title">营销团队的一站式内容生产工具</h2>
+          <p class="section-subtitle">从产品资料到平台内容，一条链路走完</p>
         </div>
         <div class="features-grid">
           <div

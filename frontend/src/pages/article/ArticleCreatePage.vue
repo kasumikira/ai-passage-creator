@@ -373,28 +373,28 @@
         <div v-if="currentPhase === 'INPUT'" class="panel-section">
           <h4 class="panel-title">
             <StarOutlined />
-            爆款技巧
+            营销技巧
           </h4>
           <div class="tips-list">
             <div class="tip-item">
               <div class="tip-icon">1</div>
               <div class="tip-content">
-                <div class="tip-title">抓住痛点</div>
-                <div class="tip-desc">直击用户最关心的问题</div>
+                <div class="tip-title">明确受众</div>
+                <div class="tip-desc">先想清楚这条内容写给谁看</div>
               </div>
             </div>
             <div class="tip-item">
               <div class="tip-icon">2</div>
               <div class="tip-content">
-                <div class="tip-title">制造悬念</div>
-                <div class="tip-desc">让读者产生好奇心</div>
+                <div class="tip-title">突出卖点</div>
+                <div class="tip-desc">把产品价值讲具体，别只喊口号</div>
               </div>
             </div>
             <div class="tip-item">
               <div class="tip-icon">3</div>
               <div class="tip-content">
-                <div class="tip-title">数字吸引</div>
-                <div class="tip-desc">使用具体数据增加说服力</div>
+                <div class="tip-title">贴合平台</div>
+                <div class="tip-desc">按渠道规则和内容形式调整表达</div>
               </div>
             </div>
           </div>
@@ -634,12 +634,12 @@ const agentStepIndexes: Record<string, number> = {
 
 // 示例选题
 const exampleTopics = [
-  '2026年AI如何改变职场',
-  '程序员如何提升竞争力',
-  '远程办公的利与弊',
-  '如何培养深度思考',
-  '新能源汽车趋势',
-  '健康饮食指南',
+  '新品上市小红书种草笔记',
+  '公众号产品深度推文',
+  '抖音短视频口播脚本',
+  '618 大促活动预热文案',
+  '私域社群转化话术',
+  '用户好评整理成笔记',
 ]
 
 // 阶段状态
