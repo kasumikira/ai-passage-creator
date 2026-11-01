@@ -40,7 +40,10 @@
       <!-- 中间：主内容区 -->
       <main class="main-content">
         <!-- AI 推理与工具调用在主内容区按事件顺序连续展示 -->
-        <section v-if="realtimeLogs.length > 0" class="central-process-panel">
+        <section
+          v-if="realtimeLogs.length > 0"
+          :class="['central-process-panel', { expanded: processExpanded }]"
+        >
           <div class="process-heading">
             <div class="process-heading-main">
               <span class="process-live-dot" aria-hidden="true"></span>
@@ -49,12 +52,17 @@
                 AI 推理与工具调用
               </h4>
               <span class="process-live-label">实时</span>
+              <span v-if="activeAgentProgress" class="process-compact-status">
+                <strong>{{ activeAgentProgress.title }}</strong>
+                <span class="compact-summary">· {{ activeAgentProgress.summary }}</span>
+              </span>
             </div>
             <button type="button" class="process-toggle" @click="processExpanded = !processExpanded">
               {{ processExpanded ? '收起过程' : '查看过程' }}
             </button>
           </div>
-          <div v-if="activeToolCall" class="tool-call-banner">
+          <div v-show="processExpanded" class="process-detail">
+            <div v-if="activeToolCall" class="tool-call-banner">
             <LoadingOutlined class="process-spinner" />
             <div class="tool-call-copy">
               <strong>AI 正在进行工具调用</strong>
@@ -74,8 +82,7 @@
             <CloseCircleOutlined v-else />
             <span><strong>{{ activeAgentProgress.title }}</strong> · {{ activeAgentProgress.summary }}</span>
           </div>
-          <Transition name="expand">
-            <div v-show="processExpanded" ref="logsContainerRef" class="logs-container">
+          <div ref="logsContainerRef" class="logs-container">
               <div
                 v-for="log in realtimeLogs"
                 :key="log.id"
@@ -125,7 +132,7 @@
                 </template>
               </div>
             </div>
-          </Transition>
+          </div>
         </section>
 
         <!-- 阶段切换（带过渡动画） -->
@@ -785,7 +792,6 @@ const startCreate = async () => {
   logSequence = 0
   activeToolCall.value = null
   activeAgentProgress.value = null
-  processExpanded.value = true
   addLog('开始创建文章任务...', 'info')
 
   try {
@@ -862,7 +868,6 @@ const flushReasoning = () => {
   } else {
     addLog(content, 'info', 'reasoning')
   }
-  processExpanded.value = true
 }
 
 const appendReasoning = (content: string) => {
@@ -907,7 +912,6 @@ const handleSSEMessage = (msg: SSEMessage) => {
         summary: msg.summary || '',
       }
       activeAgentProgress.value = progress
-      processExpanded.value = true
       if (status === 'started') {
         currentStep.value = agentStepIndexes[msg.agent] ?? currentStep.value
         currentPhase.value = msg.agent === 'agent1_generate_titles'
@@ -985,7 +989,6 @@ const handleSSEMessage = (msg: SSEMessage) => {
       const query = typeof rawQuery === 'string' ? rawQuery.trim() : ''
       const queryText = query ? `：${query.length > 120 ? `${query.slice(0, 120)}…` : query}` : ''
       if (msg.status === 'running') {
-        processExpanded.value = true
         activeToolCall.value = { name: msg.name || '', label: toolName, query: queryText.slice(1) }
         addLog(`正在调用${toolName}${queryText}`, 'info', 'tool', 'running')
       } else if (msg.status === 'completed') {
@@ -1043,7 +1046,6 @@ const handleSSEMessage = (msg: SSEMessage) => {
       currentStep.value = 6
       isCreating.value = false
       activeToolCall.value = null
-      processExpanded.value = true
       message.success('文章创作完成!')
       addLog('✨ 文章创作完成！', 'success')
       break
@@ -1058,7 +1060,6 @@ const handleSSEMessage = (msg: SSEMessage) => {
         activeAgentProgress.value.summary = errorMessage.value
       }
       activeToolCall.value = null
-      processExpanded.value = true
       addLog(`创作失败: ${msg.message || '未知错误'}`, 'error')
       break
   }
@@ -1921,14 +1922,62 @@ onBeforeUnmount(() => {
 
 /* 主内容区的 AI 过程时间线 */
 .central-process-panel {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   width: 100%;
   max-width: 1040px;
-  margin: 0 auto 24px;
-  padding: 20px;
+  margin: 0 auto 12px;
+  padding: 10px 16px;
   background: #10201b;
   border: 1px solid rgba(99, 197, 145, 0.2);
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: 0 18px 42px rgba(15, 56, 38, 0.14);
+
+  &.expanded {
+    padding: 16px 20px;
+  }
+
+  /* 展开后的过程详情浮在文档上方，不挤压正文 */
+  .process-detail {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    max-height: 46vh;
+    overflow-y: auto;
+    padding: 14px 16px;
+    border: 1px solid rgba(99, 197, 145, 0.2);
+    border-radius: 14px;
+    background: #10201b;
+    box-shadow: 0 24px 52px rgba(12, 45, 31, 0.32);
+
+    .logs-container {
+      max-height: 34vh;
+    }
+  }
+
+  .process-compact-status {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    color: #a9d9bc;
+    font-size: 12px;
+
+    strong {
+      color: #effbf4;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .compact-summary {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 42ch;
+    }
+  }
 
   .process-heading {
     display: flex;
