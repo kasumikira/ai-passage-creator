@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { listArticle } from '@/api/articleController'
+import { resolveArticleImageUrl } from '@/utils/markdown'
 import dayjs from 'dayjs'
 import {
   RocketOutlined,
@@ -24,6 +25,8 @@ const topic = ref('')
 // 最近文章
 const recentArticles = ref<API.ArticleVO[]>([])
 const loadingArticles = ref(false)
+// 封面加载失败的文章（例如历史文章里的外链已失效），回退到占位图
+const failedCovers = reactive(new Set<number>())
 
 const goToCreate = () => {
   if (topic.value.trim()) {
@@ -186,16 +189,17 @@ onMounted(() => {
         <a-spin :spinning="loadingArticles">
           <div class="articles-grid">
             <div
-              v-for="article in recentArticles"
+              v-for="(article, index) in recentArticles"
               :key="article.id"
               class="article-card"
               @click="viewArticle(article)"
             >
               <div class="article-cover">
                 <img
-                  v-if="article.coverImage"
-                  :src="article.coverImage"
+                  v-if="article.coverImage && !failedCovers.has(index)"
+                  :src="resolveArticleImageUrl(article.coverImage)"
                   :alt="article.mainTitle"
+                  @error="failedCovers.add(index)"
                 />
                 <div v-else class="cover-placeholder">
                   <FileTextOutlined />

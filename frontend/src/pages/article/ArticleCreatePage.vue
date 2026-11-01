@@ -199,7 +199,6 @@
                 </div>
                 <a-checkbox-group v-model:value="selectedImageMethods" class="methods-group">
                   <a-checkbox value="PEXELS">Pexels</a-checkbox>
-                  <a-checkbox value="NANO_BANANA">Nano Banana</a-checkbox>
                   <a-checkbox value="MERMAID">Mermaid</a-checkbox>
                   <a-checkbox value="ICONIFY">Iconify</a-checkbox>
                   <a-checkbox value="MEME">表情包</a-checkbox>
