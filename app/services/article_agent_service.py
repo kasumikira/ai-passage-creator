@@ -432,7 +432,7 @@ class ArticleAgentService:
             prompt
             + "\n\n"
             + state.marketing_context
-            + "\n\n请优先遵守平台规则，并以产品档案中的可验证信息为准。"
+            + "\n\n以产品档案中的可验证信息为事实依据。"
         )
 
     async def _call_llm(self, prompt: str, task_id: Optional[str] = None) -> str:
