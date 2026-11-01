@@ -55,7 +55,7 @@ def build_marketing_tools(
         )
         materials = await db.fetch_all(
             query="""
-                SELECT mainTitle, subTitle, topic, content, fullContent, createTime
+                SELECT taskId, mainTitle, subTitle, topic, content, fullContent, createTime
                 FROM article
                 WHERE userId = :ownerId AND isDelete = 0 AND status = 'COMPLETED'
                   AND (
@@ -79,6 +79,7 @@ def build_marketing_tools(
             ],
             "historicalMaterials": [
                 {
+                    "taskId": row["taskId"],
                     "title": row["mainTitle"],
                     "subtitle": row["subTitle"],
                     "topic": row["topic"],

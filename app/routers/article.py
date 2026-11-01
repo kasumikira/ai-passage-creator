@@ -234,9 +234,11 @@ async def ai_modify_outline(
 async def get_execution_logs(
     task_id: str,
     db: Database = Depends(get_db),
+    current_user: LoginUserVO = Depends(require_login),
 ):
-    """获取任务执行日志"""
+    """获取当前用户有权查看的任务执行日志"""
     throw_if(not task_id or not task_id.strip(), ErrorCode.PARAMS_ERROR, "任务ID不能为空")
+    await ArticleService(db).require_article_access(task_id, current_user)
     service = AgentLogService(db)
     stats = await service.get_execution_stats(task_id)
     return BaseResponse.success(data=stats)

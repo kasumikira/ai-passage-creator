@@ -2,6 +2,7 @@
 
 from typing import Optional, List, Any
 from pydantic import BaseModel, Field
+from app.agent.provenance import MaterialInput
 
 from app.schemas.common import PageRequest
 
@@ -159,6 +160,7 @@ class ArticleState:
         self.product_id: Optional[int] = None
         self.platform_id: Optional[int] = None
         self.marketing_context: Optional[str] = None
+        self.marketing_sources: list[MaterialInput] = []
 
 
 class ArticleConfirmTitleRequest(BaseModel):
